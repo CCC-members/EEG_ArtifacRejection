@@ -26,23 +26,15 @@ class Window(QMainWindow):
     def __init__(self, parent=None):
         """Initializer."""
         super().__init__(parent)
-        # self.title = "EEG Artifact rejection"
-        # self.left = 10
-        # self.top = 10
-        # self.width = 900
-        # self.height = 700
         self.initUI()
-
         # Main Options
         self.onMainOptions()
         # Menu Bar
         self.onMenuBar()
         # Tools bar
         self.onToolsBar()
-
         # Loading
         self.loadingDialog()
-
 
     def initUI(self):
         self.MainUi = uic.loadUi("guide/MainApplication.ui")
@@ -68,7 +60,6 @@ class Window(QMainWindow):
 
     # Menu Bar
     def onMenuBar(self):
-
         # Dataset Action
         self.MainUi.actionDsNew.setIcon(QIcon('images/icons/dataset.png'))
         self.MainUi.actionDsNew.setStatusTip('New Dataset')
@@ -221,12 +212,6 @@ class Window(QMainWindow):
         self.dsUi = uic.loadUi("guide/dataset.ui")
         self.dsUi.show()
         self.dsUi.pushButtonPath.clicked.connect(self.getBidsPathDialog)
-        # self.dataset = mne_bids.Dataset()
-        # self.dataset.name = 'CHBM'
-        task = ''
-        session = ''
-        extension = ''
-        suffix = ''
         print('From dataset')
 
     def loadDatasetAction(self):
@@ -241,18 +226,29 @@ class Window(QMainWindow):
         if hasattr(self, 'ds'):
             self.dsPartUi = uic.loadUi("guide/Participants.ui")
             self.dsPartUi.show()
-            print(self.dsPartUi.comboBoxType.currentText())
-            # Filling Dataset type combobox
-            itemsList = ['-Select-', 'anat', 'func', 'EEG', 'MEG', 'iEEG']
-            self.dsPartUi.comboBoxType.addItems(itemsList)
-            self.dsPartUi.comboBoxType.currentIndexChanged.connect(lambda: self.onFieldParticChange())
-            self.dsPartUi.lineEditSession.textChanged.connect(lambda: self.onFieldParticChange())
-            self.dsPartUi.lineEditTask.textChanged.connect(lambda: self.onFieldParticChange())
-            self.dsPartUi.lineEditSuffix.textChanged.connect(lambda: self.onFieldParticChange())
-            itemsList = ['-Select-', '.edf', '.set', '.dat']
-            self.dsPartUi.comboBoxExtension.addItems(itemsList)
-            self.dsPartUi.comboBoxExtension.currentIndexChanged.connect(lambda: self.onFieldParticChange())
+            # Filling Dataset Descriptors
+            itemsList = ['-Select-', 'datatype','session', 'task', 'acquisition', 'run',
+                         'processing', 'recording', 'space', 'split', 'description', 'suffix', 'extension']
+            self.dsPartUi.comboBoxDescrip.addItems(itemsList)
+            # Formatting Dataset Descriptors TableWidget
+            self.dsPartUi.tableWidgetDescrip.setColumnCount(2)
+            self.dsPartUi.tableWidgetDescrip.setHorizontalHeaderLabels(["Descriptor", "Value"])
+            # Setting Buttons properties
+            self.dsPartUi.pushButtonAdd.clicked.connect(lambda: self.onAddDatasetDescrip())
+            self.dsPartUi.pushButtonAdd.setIcon(QIcon('images/icons/add.png'))
+            self.dsPartUi.pushButtonAdd.setStyleSheet("Text-align:left")
+            self.dsPartUi.pushButtonEdit.clicked.connect(lambda: self.onEditDatasetDescrip())
+            self.dsPartUi.pushButtonEdit.setIcon(QIcon('images/icons/edit.png'))
+            self.dsPartUi.pushButtonEdit.setStyleSheet("Text-align:left")
+            self.dsPartUi.pushButtonDelete.clicked.connect(lambda: self.onDeleteDatasetDescrip())
+            self.dsPartUi.pushButtonDelete.setIcon(QIcon('images/icons/remove.png'))
+            self.dsPartUi.pushButtonDelete.setStyleSheet("Text-align:left")
+            self.dsPartUi.pushButtonCheck.clicked.connect(lambda: self.onCheckDatasetDescrip())
+            self.dsPartUi.pushButtonCheck.setIcon(QIcon('images/icons/check.png'))
+            self.dsPartUi.pushButtonCheck.setStyleSheet("Text-align:left")
             self.dsPartUi.pushButtonShow.clicked.connect(lambda: self.showParticipants())
+            self.dsPartUi.pushButtonShow.setIcon(QIcon('images/icons/view.png'))
+            self.dsPartUi.pushButtonShow.setStyleSheet("Text-align:left")
             self.dsPartUi.pushButtonImport.clicked.connect(lambda: self.loadRawfromParticipants())
             self.dsPartUi.pushButtonCancel.clicked.connect(lambda: self.dsPartUi.close())
         else:
@@ -264,6 +260,72 @@ class Window(QMainWindow):
             ans = msg.exec()
             if ans == QMessageBox.StandardButton.Ok:
                 msg.close()
+
+    def onAddDatasetDescrip(self):
+        for i in range(self.dsPartUi.tableWidgetDescrip.rowCount()):
+            item = self.dsPartUi.tableWidgetDescrip.item(i, 0)
+            if item.text() == self.dsPartUi.comboBoxDescrip.currentText():
+                msg = QMessageBox()
+                msg.setWindowTitle("Checking descriptor")
+                msg.setIcon(QMessageBox.Icon.Warning)
+                msg.setText("Notification")
+                msg.setInformativeText("The descriptor: \"" + self.dsPartUi.comboBoxDescrip.currentText()
+                                       + "\" is already on the list")
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg.exec()
+                return
+        rowCount = self.dsPartUi.tableWidgetDescrip.rowCount()
+        print('rowCount ' + str(rowCount) + ' ' + self.dsPartUi.comboBoxDescrip.currentText()
+              + ' ' + self.dsPartUi.lineEditValue.text())
+        self.dsPartUi.tableWidgetDescrip.setRowCount(rowCount + 1)
+        item = QTableWidgetItem(self.dsPartUi.comboBoxDescrip.currentText())
+        item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable)
+        item.setCheckState(Qt.CheckState.Unchecked)
+        self.dsPartUi.tableWidgetDescrip.setItem(rowCount, 0, item)
+        item = QTableWidgetItem(self.dsPartUi.lineEditValue.text())
+        item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        self.dsPartUi.tableWidgetDescrip.setItem(rowCount, 1, item)
+        self.dsPartUi.tableParticipants.resizeColumnsToContents()
+        self.dsPartUi.tableParticipants.resizeColumnsToContents()
+
+    def onEditDatasetDescrip(self):
+        for i in range(self.dsPartUi.tableWidgetDescrip.rowCount()):
+            item = self.dsPartUi.tableWidgetDescrip.item(i, 0)
+            if item.checkState() == Qt.CheckState.Checked:
+                msg = QMessageBox()
+                msg.setWindowTitle("Participants selection")
+                msg.setIcon(QMessageBox.Icon.Information)
+                msg.setText("Edit")
+                msg.setInformativeText("You should check at least one participant.")
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg.exec()
+                return
+
+        if not self.DataList:
+            msg = QMessageBox()
+            msg.setWindowTitle("Participants selection")
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("Notification")
+            msg.setInformativeText("You should check at least one participant.")
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+            return
+        else:
+            self.dsPartUi.close()
+            self.loading.show()
+            self.currentPart = 0
+
+            self.panelWizard()
+            self.loading.close()
+
+    def onCheckDatasetDescrip(self):
+        header = QTableWidgetItem('Descriptor')
+        header.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable)
+        header.setCheckState(Qt.CheckState.Unchecked)
+        self.dsPartUi.tableWidgetDescrip.setHorizontalHeaderItem(0, header)
+
+        self.dsPartUi.tableWidgetDescrip.setHorizontalHeaderItem(1, QTableWidgetItem('Value'))
 
     def onFieldParticChange(self):
         datatype = self.dsPartUi.comboBoxType.currentText()
@@ -362,7 +424,6 @@ class Window(QMainWindow):
         self.dsPartUi.tableParticipants.itemClicked.connect(lambda: self.updateCheckAll())
         self.dsPartUi.checkBoxAll.clicked.connect(lambda: self.oncheckAll(self.dsPartUi.checkBoxAll.isChecked()))
 
-
     def updateCheckAll(self):
         for i in range(self.dsPartUi.tableParticipants.rowCount()):
             item = self.dsPartUi.tableParticipants.item(i, 0)
@@ -403,7 +464,6 @@ class Window(QMainWindow):
             self.panelWizard()
             self.loading.close()
 
-
     def panelWizard(self):
         subject = self.DataList[self.currentPart]
         subID = subject.replace('sub-', '')
@@ -423,7 +483,6 @@ class Window(QMainWindow):
         else:
             bids_path = BIDSPath(subject=subject, session=session, task=task, extension=extension,
                                  suffix=suffix, datatype=datatype, root=root_path)
-
         # Importing EEG
         mne_fig = self.importEDFBids(bids_path)
         # Cleaning Principal panelWizard

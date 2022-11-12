@@ -31,7 +31,6 @@
      <widget class="QLabel" name="labelTitle">
       <property name="font">
        <font>
-        <family>Sans Serif</family>
         <pointsize>12</pointsize>
         <bold>true</bold>
        </font>
@@ -210,7 +209,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Last</string>
+            <string>End</string>
            </property>
           </widget>
          </item>
