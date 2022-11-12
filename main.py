@@ -290,34 +290,19 @@ class Window(QMainWindow):
         self.dsPartUi.tableParticipants.resizeColumnsToContents()
 
     def onEditDatasetDescrip(self):
+        checked = False
         for i in range(self.dsPartUi.tableWidgetDescrip.rowCount()):
             item = self.dsPartUi.tableWidgetDescrip.item(i, 0)
             if item.checkState() == Qt.CheckState.Checked:
-                msg = QMessageBox()
-                msg.setWindowTitle("Participants selection")
-                msg.setIcon(QMessageBox.Icon.Information)
-                msg.setText("Edit")
-                msg.setInformativeText("You should check at least one participant.")
-                msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-                msg.exec()
-                return
-
-        if not self.DataList:
+                item.setText("")
+                item.setCheckState(Qt.CheckState.Unchecked)
+                checked = True
+        if not checked:
             msg = QMessageBox()
-            msg.setWindowTitle("Participants selection")
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setText("Notification")
-            msg.setInformativeText("You should check at least one participant.")
+            msg.setInformativeText("Please. Select at least one descriptor.")
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-            msg.exec()
-            return
-        else:
-            self.dsPartUi.close()
-            self.loading.show()
-            self.currentPart = 0
-
-            self.panelWizard()
-            self.loading.close()
 
     def onCheckDatasetDescrip(self):
         header = QTableWidgetItem('Descriptor')
