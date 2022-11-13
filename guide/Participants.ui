@@ -195,7 +195,7 @@
     </property>
     <property name="icon">
      <iconset theme="Cancel">
-      <normaloff>../../EEG_Artif_Rejection/guide</normaloff>../../EEG_Artif_Rejection/guide</iconset>
+      <normaloff>../../../../../home/ariosky/EEG_Artif_Rejection/guide</normaloff>../../../../../home/ariosky/EEG_Artif_Rejection/guide</iconset>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButtonImport">

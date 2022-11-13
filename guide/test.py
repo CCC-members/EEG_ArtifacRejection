@@ -11,11 +11,13 @@ import csv
 from PyQt6 import QtGui
 from PyQt6.QtGui import QIcon, QFont, QAction, QFileSystemModel
 
-participantPath = Path(os.path.join('/mnt/Store/Data/CHBM/ds_bids_cbm_loris_24_11_21', 'sub-CBM00254'))
-print(len(list(participantPath.rglob('*.edf'))))
-for p in participantPath.rglob('*.edf'):
-    print('File: ' + str(p))
+# Dynamic_Variable_Name can be
+# anything the user wants.
+Dynamic_Variable_Name = "geek"
+value = 'value_1'
+# The value 2020 is assigned
+# to "geek" variable
+vars()[Dynamic_Variable_Name] = value
 
-list = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
-list2 = [1, 2, 3]
-del list[list2]
+# Display variable
+print(geek)

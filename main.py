@@ -10,7 +10,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QMovie
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QGroupBox, \
-    QTableWidgetItem
+    QTableWidgetItem, QDialogButtonBox
 from mne.viz import set_browser_backend
 
 mne.set_log_level('warning')
@@ -290,12 +290,18 @@ class Window(QMainWindow):
         self.dsPartUi.tableParticipants.resizeColumnsToContents()
 
     def onEditDatasetDescrip(self):
+        print("Row count: " + str(self.dsPartUi.tableWidgetDescrip.rowCount()))
         checked = False
         for i in range(self.dsPartUi.tableWidgetDescrip.rowCount()):
-            item = self.dsPartUi.tableWidgetDescrip.item(i, 0)
-            if item.checkState() == Qt.CheckState.Checked:
-                item.setText("")
-                item.setCheckState(Qt.CheckState.Unchecked)
+            itemDescrip = self.dsPartUi.tableWidgetDescrip.item(i, 0)
+            itemValue = self.dsPartUi.tableWidgetDescrip.item(i, 1)
+            if itemDescrip.checkState() == Qt.CheckState.Checked:
+                self.editItem = uic.loadUi("guide/DialogEditDescript.ui")
+                self.editItem.labelDescriptor.setText(itemDescrip.text())
+                self.editItem.labelOldValue.setText(itemValue.text())
+                btn = self.editItem.buttonBox.button(QDialogButtonBox.StandardButton.Apply)
+                btn.clicked.connect(lambda: self.updateItemDescript(itemDescrip, itemValue))
+                self.editItem.exec()
                 checked = True
         if not checked:
             msg = QMessageBox()
@@ -303,43 +309,56 @@ class Window(QMainWindow):
             msg.setText("Notification")
             msg.setInformativeText("Please. Select at least one descriptor.")
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
 
-    def onCheckDatasetDescrip(self):
-        header = QTableWidgetItem('Descriptor')
-        header.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable)
-        header.setCheckState(Qt.CheckState.Unchecked)
-        self.dsPartUi.tableWidgetDescrip.setHorizontalHeaderItem(0, header)
+    def updateItemDescript(self, itemDescrip, itemValue):
+        itemDescrip.setCheckState(Qt.CheckState.Unchecked)
+        itemValue.setText(self.editItem.lineEditNewValue.text())
+        self.editItem.close()
 
-        self.dsPartUi.tableWidgetDescrip.setHorizontalHeaderItem(1, QTableWidgetItem('Value'))
-
-    def onFieldParticChange(self):
-        datatype = self.dsPartUi.comboBoxType.currentText()
-        session = self.dsPartUi.lineEditSession.text()
-        task = self.dsPartUi.lineEditTask.text()
-        suffix = self.dsPartUi.lineEditSuffix.text()
-        extension = self.dsPartUi.comboBoxExtension.currentText()
-        if datatype == '-Select-':
+    def onDeleteDatasetDescrip(self):
+        checked = False
+        for i in range(self.dsPartUi.tableWidgetDescrip.rowCount()):
+            item = self.dsPartUi.tableWidgetDescrip.item(i, 0)
+            if item is not None and item.checkState() == Qt.CheckState.Checked:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Icon.Warning)
+                msg.setText("Notification")
+                msg.setInformativeText("Please. Select at least one descriptor.")
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+                ans = msg.exec()
+                if ans == QMessageBox.StandardButton.Ok:
+                    self.dsPartUi.tableWidgetDescrip.removeRow(i)
+                    checked = True
+        if not checked:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setText("Notification")
-            msg.setInformativeText("Please select the Data type first.")
+            msg.setInformativeText("Please. Select at least one descriptor.")
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-            ans = msg.exec()
-            return
-        if datatype != '-Select-':
-            self.dsPartUi.labelDatatype.setText(datatype)
-        descText = ''
-        if session != 'off' and task != '':
-            descText = 'sub-SubID_session-' + session
-        if task != 'off' and task != ''  and (session == 'off' or session == ''):
-            descText = 'sub-SubID_task-' + task
-        if task != 'off' and task != '' and session != 'off' and session != '':
-            descText += '_task-' + task
-        if suffix != 'none' and extension != '':
-            descText += '_' + suffix
-        if extension != '-Select-':
-            descText += extension
-        self.dsPartUi.labelDataDescrip.setText(descText)
+            msg.exec()
+
+    def onCheckDatasetDescrip(self):
+        subject, session, task, acquisition, run, processing, recording, space, split, description, root,\
+        suffix, extension, datatype, check = None, None, None, None, None, None, None, None, None, None, None, None,\
+                                             None, None, True
+        params = vars()
+        bidsPath = self.ds.path
+        for i in range(self.dsPartUi.tableWidgetDescrip.rowCount()):
+            descriptor = self.dsPartUi.tableWidgetDescrip.item(i, 0).text()
+            value = self.dsPartUi.tableWidgetDescrip.item(i, 1).text()
+            print('Descriptor: ' + descriptor)
+            print('Value: ' + value)
+            params[descriptor] = value
+        print(params)
+        print("Task: " + str(task))
+        participantsfile = bidsPath + "/participants.tsv"
+        participants = []
+        with open(participantsfile) as file:
+            for rowfile in csv.reader(file):
+                participants.append(rowfile[0].split('\t'))
+        labels = participants[0]
+        del participants[0]
 
     def showParticipants(self):
         bidsPath = self.ds.path
@@ -351,37 +370,23 @@ class Window(QMainWindow):
                 participants.append(rowfile[0].split('\t'))
         labels = participants[0]
         del participants[0]
-        pDescrip = self.dsPartUi.labelDataDescrip.text()
-        pType = self.dsPartUi.labelDatatype.text().lower()
-        subID = participants[0][0].replace('sub-', '')
-        pDescrip = pDescrip.replace('SubID', subID)
-        path = Path(os.path.join(bidsPath, participants[0][0], pType, pDescrip))
-        print(path)
-        if not path.is_file():
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Icon.Warning)
-            msg.setWindowTitle("Data description")
-            msg.setText("Notification")
-            msg.setInformativeText("We can not find any file with specified data description.")
-            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-            msg.exec()
-            return
-        # printing data line by line
-        indecesRm = []
-        nb_row = len(participants)
-        nb_col = len(participants[0])
-        for row in range(nb_row):
-            for col in range(nb_col):
-                if col % nb_col == 0:
-                    participantPath = Path(os.path.join(bidsPath, str(participants[row][col])))
-                    if not participantPath.exists() or not list(participantPath.rglob('*.edf')) \
-                            or not list(participantPath.rglob('*electrodes.tsv')) \
-                            or not list(participantPath.rglob('*channels.tsv')) \
-                            or not list(participantPath.rglob('*events.tsv')):
-                        self.rejectedPart.append(str(participants[row][col]))
-                        indecesRm.append(row)
-        for i in sorted(indecesRm, reverse=True):
-            del participants[i]
+        # # printing data line by line
+        # indecesRm = []
+        # nb_row = len(participants)
+        # nb_col = len(participants[0])
+        # for row in range(nb_row):
+        #     for col in range(nb_col):
+        #         if col % nb_col == 0:
+        #             participantPath = Path(os.path.join(bidsPath, str(participants[row][col])))
+        #             if not participantPath.exists() or not list(participantPath.rglob('*.edf')) \
+        #                     or not list(participantPath.rglob('*electrodes.tsv')) \
+        #                     or not list(participantPath.rglob('*channels.tsv')) \
+        #                     or not list(participantPath.rglob('*events.tsv')):
+        #                 self.rejectedPart.append(str(participants[row][col]))
+        #                 indecesRm.append(row)
+        # for i in sorted(indecesRm, reverse=True):
+        #     del participants[i]
+
         nb_row = len(participants)
         nb_col = len(participants[0])
         self.dsPartUi.tableParticipants.setRowCount(nb_row)

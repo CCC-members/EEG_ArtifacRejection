@@ -83,7 +83,7 @@
    <widget class="QLabel" name="labelDescriptor">
     <property name="geometry">
      <rect>
-      <x>80</x>
+      <x>90</x>
       <y>30</y>
       <width>161</width>
       <height>21</height>
@@ -96,7 +96,7 @@
    <widget class="QLineEdit" name="lineEditNewValue">
     <property name="geometry">
      <rect>
-      <x>80</x>
+      <x>88</x>
       <y>98</y>
       <width>131</width>
       <height>22</height>
@@ -106,7 +106,7 @@
    <widget class="QLabel" name="labelOldValue">
     <property name="geometry">
      <rect>
-      <x>80</x>
+      <x>90</x>
       <y>60</y>
       <width>161</width>
       <height>21</height>
