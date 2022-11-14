@@ -10,7 +10,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QMovie
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QGroupBox, \
-    QTableWidgetItem, QDialogButtonBox
+    QTableWidgetItem, QDialogButtonBox, QSizePolicy
 from mne.viz import set_browser_backend
 
 mne.set_log_level('warning')
@@ -125,11 +125,9 @@ class Window(QMainWindow):
         self.loading = uic.loadUi("guide/Loading.ui")
         self.loading.setWindowFlag(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.loading.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        movieLoading = QMovie('images/icons/loading.gif')
-        self.loading.labelLoading.setMovie(movieLoading)
+        self.movieLoading = QMovie('images/icons/loading_tb.gif')
+        self.loading.labelLoading.setMovie(self.movieLoading)
         self.loading.labelLoading.setScaledContents(True)
-        movieLoading.start()
-        # self.loading.show()
 
     def onMyToolBarButtonClick(self, s):
         print("click", s)
@@ -196,12 +194,13 @@ class Window(QMainWindow):
                 groupBox = QGroupBox("Authors: ")
                 groupBox.setLayout(formLayout)
                 self.lds.scrollAreaAuth.setWidget(groupBox)
-                self.ds = Dataset(folder, ds_descrip['Name'], ds_descrip['DatasetType'], ds_descrip['DatasetDOI'], ds_descrip['Authors'])
+                self.Dataset = Dataset(folder, ds_descrip['Name'], ds_descrip['DatasetType'], ds_descrip['DatasetDOI'], ds_descrip['Authors'])
             else:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Warning)
                 msg.setText("Notification")
                 msg.setInformativeText("We can find the dataset_description.json in the specific path")
+                msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
                 msg.setStandardButtons(QMessageBox.Ok)
                 ans = msg.exec()
                 msg.close()
@@ -223,7 +222,7 @@ class Window(QMainWindow):
         print('From dataset')
 
     def loadParticipants(self):
-        if hasattr(self, 'ds'):
+        if hasattr(self, 'Dataset'):
             self.dsPartUi = uic.loadUi("guide/Participants.ui")
             self.dsPartUi.show()
             # Filling Dataset Descriptors
@@ -234,6 +233,7 @@ class Window(QMainWindow):
             self.dsPartUi.tableWidgetDescrip.setColumnCount(2)
             self.dsPartUi.tableWidgetDescrip.setHorizontalHeaderLabels(["Descriptor", "Value"])
             # Setting Buttons properties
+            self.dsPartUi.comboBoxDescrip.currentTextChanged.connect(lambda: self.dsPartUi.lineEditValue.setText(''))
             self.dsPartUi.pushButtonAdd.clicked.connect(lambda: self.onAddDatasetDescrip())
             self.dsPartUi.pushButtonAdd.setIcon(QIcon('images/icons/add.png'))
             self.dsPartUi.pushButtonAdd.setStyleSheet("Text-align:left")
@@ -249,13 +249,16 @@ class Window(QMainWindow):
             self.dsPartUi.pushButtonShow.clicked.connect(lambda: self.showParticipants())
             self.dsPartUi.pushButtonShow.setIcon(QIcon('images/icons/view.png'))
             self.dsPartUi.pushButtonShow.setStyleSheet("Text-align:left")
+            self.dsPartUi.pushButtonImport.setIcon(QIcon('images/icons/import.png'))
             self.dsPartUi.pushButtonImport.clicked.connect(lambda: self.loadRawfromParticipants())
+            self.dsPartUi.pushButtonCancel.setIcon(QIcon('images/icons/cancel.png'))
             self.dsPartUi.pushButtonCancel.clicked.connect(lambda: self.dsPartUi.close())
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setText("Notification")
             msg.setInformativeText("Please create or load a Dataset before")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             ans = msg.exec()
             if ans == QMessageBox.StandardButton.Ok:
@@ -271,6 +274,7 @@ class Window(QMainWindow):
                 msg.setText("Notification")
                 msg.setInformativeText("The descriptor: \"" + self.dsPartUi.comboBoxDescrip.currentText()
                                        + "\" is already on the list")
+                msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
                 msg.setStandardButtons(QMessageBox.StandardButton.Ok)
                 msg.exec()
                 return
@@ -288,6 +292,7 @@ class Window(QMainWindow):
         self.dsPartUi.tableWidgetDescrip.setItem(rowCount, 1, item)
         self.dsPartUi.tableParticipants.resizeColumnsToContents()
         self.dsPartUi.tableParticipants.resizeColumnsToContents()
+        self.dsPartUi.lineEditValue.setText('')
 
     def onEditDatasetDescrip(self):
         print("Row count: " + str(self.dsPartUi.tableWidgetDescrip.rowCount()))
@@ -308,6 +313,7 @@ class Window(QMainWindow):
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setText("Notification")
             msg.setInformativeText("Please. Select at least one descriptor.")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
 
@@ -325,6 +331,7 @@ class Window(QMainWindow):
                 msg.setIcon(QMessageBox.Icon.Warning)
                 msg.setText("Notification")
                 msg.setInformativeText("Please. Select at least one descriptor.")
+                msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
                 msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
                 ans = msg.exec()
                 if ans == QMessageBox.StandardButton.Ok:
@@ -335,6 +342,7 @@ class Window(QMainWindow):
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setText("Notification")
             msg.setInformativeText("Please. Select at least one descriptor.")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
 
@@ -342,28 +350,64 @@ class Window(QMainWindow):
         subject, session, task, acquisition, run, processing, recording, space, split, description, root,\
         suffix, extension, datatype, check = None, None, None, None, None, None, None, None, None, None, None, None,\
                                              None, None, True
-        params = vars()
-        bidsPath = self.ds.path
+        root = self.Dataset.path
         for i in range(self.dsPartUi.tableWidgetDescrip.rowCount()):
             descriptor = self.dsPartUi.tableWidgetDescrip.item(i, 0).text()
             value = self.dsPartUi.tableWidgetDescrip.item(i, 1).text()
-            print('Descriptor: ' + descriptor)
-            print('Value: ' + value)
-            params[descriptor] = value
-        print(params)
-        print("Task: " + str(task))
-        participantsfile = bidsPath + "/participants.tsv"
+            print('Descriptor:' + descriptor + ' -->> Value:' + value)
+            if descriptor == 'session': session = value
+            if descriptor == 'task': task = value
+            if descriptor == 'acquisition': acquisition = value
+            if descriptor == 'run': run = value
+            if descriptor == 'processing': processing = value
+            if descriptor == 'recording': recording = value
+            if descriptor == 'space': space = value
+            if descriptor == 'split': split = value
+            if descriptor == 'description': description = value
+            if descriptor == 'suffix': suffix = value
+            if descriptor == 'extension': extension = value
+            if descriptor == 'datatype': datatype = value
+            if descriptor == 'check': check = value
+        participantsfile = root + "/participants.tsv"
         participants = []
         with open(participantsfile) as file:
             for rowfile in csv.reader(file):
                 participants.append(rowfile[0].split('\t'))
         labels = participants[0]
         del participants[0]
+        subject = participants[0][0].replace('sub-', '')
+        self.Dataset.bids_path = BIDSPath(subject=subject, session=session, task=task, acquisition=acquisition, run=run,
+                                          processing=processing, recording=recording, space=space, split=split,
+                                          description=description, root=root, suffix=suffix, extension=extension,
+                                          datatype=datatype, check=check)
+        try:
+            self.raw = read_raw_bids(bids_path=self.Dataset.bids_path, verbose=True)
+            msg = QMessageBox()
+            msg.setWindowTitle("Dataset descriptors")
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setText("Notification")
+            msg.setInformativeText("The Dataset structure was checked successfully.<br>")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+            return
+        except FileNotFoundError as fe:
+            msg = QMessageBox()
+            msg.setWindowTitle("Participants selection")
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("Notification")
+            msg.setInformativeText("We can't find any data with the specified structure description.<br>" +
+                                   fe.filename + "<br>"
+                                   "Please check the Dataset structure")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+            return
 
     def showParticipants(self):
-        bidsPath = self.ds.path
+        root = str(self.Dataset.bids_path.root)
         self.rejectedPart = []
-        participantsfile = bidsPath + "/participants.tsv"
+        participantsfile = root + "/participants.tsv"
         participants = []
         with open(participantsfile) as file:
             for rowfile in csv.reader(file):
@@ -443,43 +487,44 @@ class Window(QMainWindow):
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setText("Notification")
             msg.setInformativeText("You should check at least one participant.")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
             return
         else:
             self.dsPartUi.close()
-            self.loading.show()
             self.currentPart = 0
-
             self.panelWizard()
-            self.loading.close()
 
     def panelWizard(self):
+        self.movieLoading.start()
+        # movieLoading.start()
+        self.loading.show()
         subject = self.DataList[self.currentPart]
         subID = subject.replace('sub-', '')
         print('-->> Importing subject: ' + subID)
-        pDescrip = self.dsPartUi.labelDataDescrip.text().replace('SubID', subID)
-        datatype = self.dsPartUi.comboBoxType.currentText().lower()
-        root_path = Path(self.ds.path)
-        session = self.dsPartUi.lineEditSession.text()
-        task = self.dsPartUi.lineEditTask.text()
-        suffix = self.dsPartUi.lineEditSuffix.text()
-        extension = self.dsPartUi.comboBoxExtension.currentText()
-        subject = subID
         self.MainUi.labelTitle.setText('Participant: ' + subID)
-        if session == 'off' or session == 'none' or session == '':
-            bids_path = BIDSPath(subject=subject, task=task, extension=extension,
-                                 suffix=suffix, datatype=datatype, root=root_path)
-        else:
-            bids_path = BIDSPath(subject=subject, session=session, task=task, extension=extension,
-                                 suffix=suffix, datatype=datatype, root=root_path)
+        self.Dataset.bids_path.update(subject=subID)
         # Importing EEG
-        mne_fig = self.importEDFBids(bids_path)
-        # Cleaning Principal panelWizard
-        for i in reversed(range(self.MainUi.verticalLayoutMain.count())):
-            self.MainUi.verticalLayoutMain.itemAt(i).widget().deleteLater()
-        self.MainUi.verticalLayoutMain.addWidget(mne_fig)
+        try:
+            # Cleaning Principal panelWizard
+            for i in reversed(range(self.MainUi.verticalLayoutMain.count())):
+                self.MainUi.verticalLayoutMain.itemAt(i).widget().deleteLater()
+            mne_fig = self.importEDFBids(self.Dataset.bids_path)
+            self.MainUi.verticalLayoutMain.addWidget(mne_fig)
+        except FileNotFoundError as fe:
+            msg = QMessageBox()
+            msg.setWindowTitle("Participants selection")
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("Notification")
+            msg.setInformativeText("We can't find the specified structure description for Subject:" + subID + " .<br>" +
+                                   fe.filename + "<br>"
+                                   "This participant will rejected from the analysis.")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
         self.checkWizardOptions()
+        self.loading.close()
 
     def importEDFBids(self, bids_path):
         self.raw = read_raw_bids(bids_path=bids_path, verbose=True)
@@ -585,6 +630,7 @@ class Window(QMainWindow):
         msg.setIcon(QMessageBox.Warning)
         msg.setText("Notification")
         msg.setInformativeText("Do you want to save the annotations?")
+        msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         msg.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
         ans = msg.exec()
         if ans == QMessageBox.Save:
@@ -601,6 +647,7 @@ class Window(QMainWindow):
         msg.setIcon(QMessageBox.Icon.Question)
         msg.setText("Notification")
         msg.setInformativeText("Do you want to close the application?")
+        msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
         ans = msg.exec()
         if ans == QMessageBox.StandardButton.Yes:
