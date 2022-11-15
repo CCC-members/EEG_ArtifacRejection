@@ -1,5 +1,7 @@
 import sys
 import os
+
+import mne
 import pyautogui
 from datetime import timedelta
 from pathlib import Path
@@ -10,14 +12,7 @@ from PyQt6 import uic
 import csv
 from PyQt6 import QtGui
 from PyQt6.QtGui import QIcon, QFont, QAction, QFileSystemModel
+from mne.viz import set_browser_backend
 
-# Dynamic_Variable_Name can be
-# anything the user wants.
-Dynamic_Variable_Name = "geek"
-value = 'value_1'
-# The value 2020 is assigned
-# to "geek" variable
-vars()[Dynamic_Variable_Name] = value
-
-# Display variable
-print(geek)
+raw = mne.io.read_raw_fif('../tmp/CBM00001_raw_data_eeg.fif')
+raw.plot(duration=10, n_channels=20, block=True, color='blue', show_options=True)

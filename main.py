@@ -129,13 +129,6 @@ class Window(QMainWindow):
         self.loading.labelLoading.setMovie(self.movieLoading)
         self.loading.labelLoading.setScaledContents(True)
 
-    def onMyToolBarButtonClick(self, s):
-        print("click", s)
-    def onMyToolBarButtonClickAnnot(self, s):
-        self.importEDF('/mnt/Store/Data/CHBM/ds_bids_cbm_loris_24_11_21')
-    def onMyToolBarButtonClickSave(self, s):
-        self.saveAnnotations()
-
     def openFileNameDialog(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -204,8 +197,7 @@ class Window(QMainWindow):
                 msg.setStandardButtons(QMessageBox.Ok)
                 ans = msg.exec()
                 msg.close()
-            # self.importEDF(fileName)
-            # self.fileName = fileName
+
     def createDataset(self):
         # Create a dataset from bids_path
         self.dsUi = uic.loadUi("guide/dataset.ui")
@@ -498,7 +490,6 @@ class Window(QMainWindow):
 
     def panelWizard(self):
         self.movieLoading.start()
-        # movieLoading.start()
         self.loading.show()
         subject = self.DataList[self.currentPart]
         subID = subject.replace('sub-', '')
@@ -510,8 +501,12 @@ class Window(QMainWindow):
             # Cleaning Principal panelWizard
             for i in reversed(range(self.MainUi.verticalLayoutMain.count())):
                 self.MainUi.verticalLayoutMain.itemAt(i).widget().deleteLater()
-            mne_fig = self.importEDFBids(self.Dataset.bids_path)
-            self.MainUi.verticalLayoutMain.addWidget(mne_fig)
+            if subID in self.Dataset.tmpRaws:
+                print('Loading tmp data')
+                self.importTmpData()
+            else:
+                self.importEDFBids(self.Dataset.bids_path)
+            self.MainUi.verticalLayoutMain.addWidget(self.exploreRawData())
         except FileNotFoundError as fe:
             msg = QMessageBox()
             msg.setWindowTitle("Participants selection")
@@ -525,6 +520,10 @@ class Window(QMainWindow):
             msg.exec()
         self.checkWizardOptions()
         self.loading.close()
+
+    def importTmpData(self):
+        self.raw = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
+        self.raw.plot(duration=10, n_channels=20, block=False, color='blue', show_options=True)
 
     def importEDFBids(self, bids_path):
         self.raw = read_raw_bids(bids_path=bids_path, verbose=True)
@@ -544,23 +543,37 @@ class Window(QMainWindow):
         #print("This the montage {}", montage.ch_names)
         #raw.set_montage(montage, on_missing='ignore')
 
-        # Setting new annotations
-        meas_date = self.raw.info['meas_date']
-        orig_time = self.raw.annotations.orig_time
-        time_format = '%Y-%m-%d %H:%M:%S.%f'
-        new_orig_time = (meas_date + timedelta(seconds=50)).strftime(time_format)
-        old_annotations = self.raw.annotations
-        new_annotations = mne.Annotations(onset=[0, 0, 0],
-                                          duration=[0, 0, 0],
-                                          description=['AAA', 'BBB', 'CCC'],
-                                          orig_time=self.raw.annotations[0]['orig_time'])
-        self.raw.set_annotations(old_annotations + new_annotations)
-        print("Plotting EEG data")
-        #print(raw)
-        events, events_id = mne.events_from_annotations(self.raw)
-        events.shape
+        # Getting derivatives
+        derivativesPath = Path(os.path.join(bids_path.root, 'derivatives'))
+        derivativesFiles = list(derivativesPath.rglob('*' + bids_path.subject + '*annotations.tsv'))
+        if derivativesFiles:
+            onset = []
+            duration = []
+            description = []
+            with open(derivativesFiles[0]) as file:
+                for rowfile in csv.reader(file):
+                    annotation = rowfile[0].split('\t')
+                    if annotation[0] != 'onset' and annotation[1] != 'duration':
+                        onset.append(annotation[0])
+                        duration.append(annotation[1])
+                        description.append(annotation[2])
+            # Setting new annotations
+            meas_date = self.raw.info['meas_date']
+            orig_time = self.raw.annotations.orig_time
+            time_format = '%Y-%m-%d %H:%M:%S.%f'
+            new_orig_time = (meas_date + timedelta(seconds=50)).strftime(time_format)
+            old_annotations = self.raw.annotations
+            new_annotations = mne.Annotations(onset=onset,
+                                              duration=duration,
+                                              description=description,
+                                              orig_time=self.raw.annotations[0]['orig_time'])
+            self.raw.set_annotations(old_annotations + new_annotations)
+        # events, events_id = mne.events_from_annotations(self.raw)
         # mne.viz.plot_events(events, events_id, sfreq=50)
         #raw.plot_psd(fmax=50)
+
+    def exploreRawData(self):
+        print("Plotting EEG data")
         set_browser_backend("qt")
         fig = self.raw.plot(duration=10, n_channels=20, block=False, color='blue', show_options=True)
         fig.fake_keypress('a')
@@ -598,28 +611,49 @@ class Window(QMainWindow):
             self.MainUi.pushButtonNext.setEnabled(False)
             self.MainUi.pushButtonNextAll.setEnabled(False)
 
+    def WizardSaveTmp(self):
+        self.movieLoading.start()
+        self.loading.show()
+        print('Saving raw data.')
+        raw_temp = self.raw.copy()
+        print(Path.home())
+        tmpPath = Path(Path.home(), 'tmp', 'Dataset')
+        if not tmpPath.exists():
+            os.makedirs(tmpPath)
+        subjectPath = tmpPath.joinpath(self.Dataset.bids_path.subject)
+        if not subjectPath.exists():
+            os.makedirs(subjectPath)
+        tmpFile = subjectPath.joinpath(self.Dataset.bids_path.subject + '_rawdata_eeg.fif')
+        raw_temp.save(tmpFile, overwrite=True)
+        self.Dataset.tmpRaws[self.Dataset.bids_path.subject] = tmpFile
+        self.loading.close()
+
     def WizardSave(self):
-        print('Save')
+        print('Save all')
 
     def WizardSaveAll(self):
         print('Save all')
 
     def WizardBackAll(self):
+        self.WizardSaveTmp()
         self.currentPart = 0
         self.panelWizard()
         print('Wizard Back All')
 
     def WizardBack(self):
+        self.WizardSaveTmp()
         self.currentPart -= 1
         self.panelWizard()
         print('Wizard Back')
 
     def WizardNext(self):
+        self.WizardSaveTmp()
         self.currentPart += 1
         self.panelWizard()
         print('Wizard Next')
 
     def WizardNextAll(self):
+        self.WizardSaveTmp()
         self.currentPart = len(self.DataList) - 1
         self.panelWizard()
         print('Wizard Next All')
@@ -663,6 +697,7 @@ class Dataset:
         self.dstype = dstype
         self.doi = doi
         self.authors = authors
+        self.tmpRaws = {}
 
 # application
 if __name__ == "__main__":
