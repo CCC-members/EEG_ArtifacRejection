@@ -97,6 +97,19 @@ class Window(QMainWindow):
         self.MainUi.button_raw.clicked.connect(self.showRawDataAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_raw)
 
+        self.MainUi.button_psd = QToolButton(self)
+        self.MainUi.button_psd.setIcon(QIcon('images/icons/psd.png'))
+        self.MainUi.button_psd.setCheckable(True)
+        # self.MainUi.button_psd.setEnabled(False)
+        self.MainUi.button_psd.clicked.connect(self.computePSDAction)
+        self.MainUi.toolBar.addWidget(self.MainUi.button_psd)
+
+        self.MainUi.button_topomap = QToolButton(self)
+        self.MainUi.button_topomap.setIcon(QIcon('images/icons/topomap.png'))
+        self.MainUi.button_topomap.setCheckable(True)
+        # self.MainUi.button_psd.setEnabled(False)
+        self.MainUi.button_topomap.clicked.connect(self.computeTopoMapAction)
+        self.MainUi.toolBar.addWidget(self.MainUi.button_topomap)
         # toolbar = QToolBar("My main toolbar")
         # toolbar.setIconSize(QSize(16, 16))
         # self.addToolBar(toolbar)
@@ -710,6 +723,19 @@ class Window(QMainWindow):
             QApplication.quit()
         else:
             msg.close()
+
+    def computePSDAction(self):
+        print('Computing PSD')
+        if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
+            self.spectrum = self.rawTmp.compute_psd()
+            # spectrum.plot(average=True)
+        else:
+            print('Loading raw data')
+            self.spectrum = self.raw.compute_psd()
+
+    def computeTopoMapAction(self):
+        if self.spectrum:
+            self.spectrum.plot_topomap()
 
 class Dataset:
     def __init__(self, path, name, dstype, doi, authors):
