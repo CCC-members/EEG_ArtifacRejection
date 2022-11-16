@@ -8,9 +8,9 @@ import mne
 import pyautogui
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon, QMovie
+from PyQt6.QtGui import QIcon, QMovie, QAction
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QGroupBox, \
-    QTableWidgetItem, QDialogButtonBox, QSizePolicy
+    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton
 from mne.viz import set_browser_backend
 
 mne.set_log_level('warning')
@@ -90,7 +90,13 @@ class Window(QMainWindow):
 
     # Tools Box
     def onToolsBar(self):
-        menuBar = self.MainUi.toolBar
+        self.MainUi.button_raw = QToolButton(self)
+        self.MainUi.button_raw.setIcon(QIcon('images/icons/raw_data.png'))
+        self.MainUi.button_raw.setCheckable(True)
+        self.MainUi.button_raw.setEnabled(False)
+        self.MainUi.button_raw.clicked.connect(self.showRawDataAction)
+        self.MainUi.toolBar.addWidget(self.MainUi.button_raw)
+
         # toolbar = QToolBar("My main toolbar")
         # toolbar.setIconSize(QSize(16, 16))
         # self.addToolBar(toolbar)
@@ -499,14 +505,17 @@ class Window(QMainWindow):
         # Importing EEG
         try:
             # Cleaning Principal panelWizard
-            for i in reversed(range(self.MainUi.verticalLayoutMain.count())):
-                self.MainUi.verticalLayoutMain.itemAt(i).widget().deleteLater()
+            for i in reversed(range(self.MainUi.horizontalLayoutMain.count())):
+                self.MainUi.horizontalLayoutMain.itemAt(i).widget().deleteLater()
             if subID in self.Dataset.tmpRaws:
                 print('Loading tmp data')
-                self.importTmpData()
+                self.MainUi.button_raw.setEnabled(True)
+                self.MainUi.horizontalLayoutMain.addWidget(self.importTmpData())
             else:
-                self.importEDFBids(self.Dataset.bids_path)
-            self.MainUi.verticalLayoutMain.addWidget(self.exploreRawData())
+                print('Loading raw data')
+                self.MainUi.button_raw.setEnabled(False)
+                self.importRawBids(self.Dataset.bids_path)
+                self.MainUi.horizontalLayoutMain.addWidget(self.exploreRawData())
         except FileNotFoundError as fe:
             msg = QMessageBox()
             msg.setWindowTitle("Participants selection")
@@ -522,10 +531,13 @@ class Window(QMainWindow):
         self.loading.close()
 
     def importTmpData(self):
-        self.raw = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
-        self.raw.plot(duration=10, n_channels=20, block=False, color='blue', show_options=True)
+        self.rawTmp = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
+        fig = self.rawTmp.plot(duration=10, n_channels=20, block=False, color='blue', show_options=True)
+        fig.fake_keypress('a')
+        return fig
 
-    def importEDFBids(self, bids_path):
+
+    def importRawBids(self, bids_path):
         self.raw = read_raw_bids(bids_path=bids_path, verbose=True)
         #raw = mne.io.read_raw_edf(file_name, preload=True, stim_channel='auto', verbose=True)
         data = self.raw.get_data()
@@ -578,6 +590,15 @@ class Window(QMainWindow):
         fig = self.raw.plot(duration=10, n_channels=20, block=False, color='blue', show_options=True)
         fig.fake_keypress('a')
         return fig
+
+    def showRawDataAction(self, checked):
+        if checked:
+            self.importRawBids(self.Dataset.bids_path)
+            self.MainUi.horizontalLayoutMain.addWidget(self.exploreRawData())
+        else:
+            for i in reversed(range(self.MainUi.horizontalLayoutMain.count())):
+                self.MainUi.horizontalLayoutMain.itemAt(-1).widget().deleteLater()
+                break
 
     def checkWizardOptions(self):
         print("Current participant: " + str(self.currentPart + 1) + ". Number of participants: " + str(len(self.DataList)))
