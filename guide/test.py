@@ -1,18 +1,27 @@
-import sys
+import csv
+import json
 import os
+import sys
+from datetime import timedelta
 
 import mne
 import pyautogui
-from datetime import timedelta
-from pathlib import Path
-
-import matplotlib
-from PyQt6.QtCore import Qt, QSize
 from PyQt6 import uic
-import csv
-from PyQt6 import QtGui
-from PyQt6.QtGui import QIcon, QFont, QAction, QFileSystemModel
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon, QMovie, QAction
+from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QGroupBox, \
+    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget
 from mne.viz import set_browser_backend
 
-raw = mne.io.read_raw_fif('../tmp/CBM00001_raw_data_eeg.fif')
-raw.plot(duration=10, n_channels=20, block=True, color='blue', show_options=True)
+mne.set_log_level('warning')
+from mne_bids import (read_raw_bids, BIDSPath)
+from pathlib import Path
+import matplotlib.pyplot as plt
+plt.switch_backend('Qt5Agg')
+
+saving = uic.loadUi("Saving.ui")
+saving.setWindowFlag(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
+saving.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+movieSaving = QMovie('images/icons/saving.gif')
+saving.labelLoading.setMovie(movieSaving)
+saving.labelLoading.setScaledContents(True)

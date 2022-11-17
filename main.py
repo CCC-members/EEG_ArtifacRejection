@@ -3,6 +3,7 @@ import json
 import os
 import sys
 from datetime import timedelta
+import time
 
 import mne
 import pyautogui
@@ -10,7 +11,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QMovie, QAction
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QGroupBox, \
-    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton
+    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QDialog
 from mne.viz import set_browser_backend
 
 mne.set_log_level('warning')
@@ -35,6 +36,9 @@ class Window(QMainWindow):
         self.onToolsBar()
         # Loading
         self.loadingDialog()
+        # Saving
+        # self.savingDialog()
+
 
     def initUI(self):
         self.MainUi = uic.loadUi("guide/MainApplication.ui")
@@ -99,17 +103,18 @@ class Window(QMainWindow):
 
         self.MainUi.button_psd = QToolButton(self)
         self.MainUi.button_psd.setIcon(QIcon('images/icons/psd.png'))
-        self.MainUi.button_psd.setCheckable(True)
+        # self.MainUi.button_psd.setCheckable(True)
         # self.MainUi.button_psd.setEnabled(False)
         self.MainUi.button_psd.clicked.connect(self.computePSDAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_psd)
 
         self.MainUi.button_topomap = QToolButton(self)
         self.MainUi.button_topomap.setIcon(QIcon('images/icons/topomap.png'))
-        self.MainUi.button_topomap.setCheckable(True)
+        # self.MainUi.button_topomap.setCheckable(True)
         # self.MainUi.button_psd.setEnabled(False)
         self.MainUi.button_topomap.clicked.connect(self.computeTopoMapAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_topomap)
+
         # toolbar = QToolBar("My main toolbar")
         # toolbar.setIconSize(QSize(16, 16))
         # self.addToolBar(toolbar)
@@ -147,6 +152,14 @@ class Window(QMainWindow):
         self.movieLoading = QMovie('images/icons/loading_tb.gif')
         self.loading.labelLoading.setMovie(self.movieLoading)
         self.loading.labelLoading.setScaledContents(True)
+
+    def savingDialog(self):
+        self.saving = uic.loadUi("guide/SavingForm.ui")
+        self.saving.setWindowFlag(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
+        self.saving.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.movieSaving = QMovie('images/icons/saving.gif')
+        self.saving.labelSaving.setMovie(self.movieSaving)
+        self.saving.labelSaving.setScaledContents(True)
 
     def openFileNameDialog(self):
         options = QFileDialog.Options()
@@ -416,6 +429,9 @@ class Window(QMainWindow):
             return
 
     def showParticipants(self):
+        if not hasattr(self.Dataset, 'bids_path'):
+            self.onCheckDatasetDescrip()
+        self.dsPartUi.checkBoxAll.setEnabled(True)
         root = str(self.Dataset.bids_path.root)
         self.rejectedPart = []
         participantsfile = root + "/participants.tsv"
@@ -545,10 +561,9 @@ class Window(QMainWindow):
 
     def importTmpData(self):
         self.rawTmp = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
-        fig = self.rawTmp.plot(duration=10, n_channels=20, block=False, color='blue', show_options=True)
+        fig = self.rawTmp.plot(duration=10, n_channels=20, block=False, color='blue', show_options=False)
         fig.fake_keypress('a')
         return fig
-
 
     def importRawBids(self, bids_path):
         self.raw = read_raw_bids(bids_path=bids_path, verbose=True)
@@ -646,9 +661,16 @@ class Window(QMainWindow):
             self.MainUi.pushButtonNextAll.setEnabled(False)
 
     def WizardSaveTmp(self):
-        self.movieLoading.start()
-        self.loading.show()
         print('Saving raw data.')
+        saving = uic.loadUi("guide/Saving.ui")
+        saving.setWindowFlag(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
+        saving.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        movieSaving = QMovie('images/icons/saving.gif')
+        movieSaving.start()
+        saving.labelSaving.setMovie(movieSaving)
+        saving.labelSaving.setScaledContents(True)
+        saving.setModal(True)
+        saving.open()
         raw_temp = self.raw.copy()
         print(Path.home())
         tmpPath = Path(Path.home(), 'tmp', 'Dataset')
@@ -660,7 +682,8 @@ class Window(QMainWindow):
         tmpFile = subjectPath.joinpath(self.Dataset.bids_path.subject + '_rawdata_eeg.fif')
         raw_temp.save(tmpFile, overwrite=True)
         self.Dataset.tmpRaws[self.Dataset.bids_path.subject] = tmpFile
-        self.loading.close()
+        saving.close()
+        print('Temporal data saved.')
 
     def WizardSave(self):
         print('Save all')
@@ -710,6 +733,7 @@ class Window(QMainWindow):
             msg.close()
         else:
             msg.close()
+
     def exitAction(self):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Icon.Question)
@@ -728,14 +752,24 @@ class Window(QMainWindow):
         print('Computing PSD')
         if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
             self.spectrum = self.rawTmp.compute_psd()
-            # spectrum.plot(average=True)
         else:
-            print('Loading raw data')
             self.spectrum = self.raw.compute_psd()
+        set_browser_backend("qt")
+        fig_psd = self.spectrum.plot(show=True)
+        fig_ave = self.spectrum.plot(color='blue', show=True, average=True)
+        self.DialogViz = uic.loadUi("guide/DialogViz.ui")
+        self.DialogViz.show()
+        set_browser_backend("qt")
+        self.DialogViz.verticalLayoutMain.addWidget(fig_psd)
+        self.DialogViz.verticalLayoutMain.addWidget(fig_ave)
 
     def computeTopoMapAction(self):
         if self.spectrum:
             self.spectrum.plot_topomap()
+            self.DialogViztopo = uic.loadUi("guide/DialogViz.ui")
+            self.DialogViztopo.show()
+            self.DialogViztopo.verticalLayoutMain.addWidget(self.spectrum.plot_topomap())
+
 
 class Dataset:
     def __init__(self, path, name, dstype, doi, authors):
