@@ -20,11 +20,13 @@ import matplotlib.pyplot as plt
 plt.switch_backend('Qt5Agg')
 
 import json
+with open('../config/annotation.json', 'r') as f:
+    json_data = json.load(f)
 
 formated_data = []
-for entry in data:
+for entry in json_data:
     entry_list = []
-    prefix_list = [entry.get('customerid'), True if entry.get('isvip') else False]
+    prefix_list = [entry.get('annotations'), True if entry.get('isvip') else False]
     for k in entry.keys():
         if 'site' in k:
             for timestamp in entry[k]:
