@@ -1,0 +1,129 @@
+{
+  "annotations":[
+                  {
+                    "description": "Biological-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "EEG-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Eye-blink-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Eye-movement-vertical-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Eye-movement-horizontal-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Slow-eye-movement-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Nystagmus-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Chewing-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Sucking-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Glossokinetic-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Rocking-patting-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Movement-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Respiration-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Pulse-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "ECG-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Sweat-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "EMG-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Non-biological-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Power-supply-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Induction-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Dialysis-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Artificial-ventilation-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Electrode-pops-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Salt-bridge-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  },
+                  {
+                    "description": "Other-EEG-artifact",
+                    "onset": 0,
+                    "duration": 0
+                  }
+  ]
+}

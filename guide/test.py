@@ -19,4 +19,20 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 plt.switch_backend('Qt5Agg')
 
-new_annot = mne.io.kit.read_mrk('config/hed.mrk')
+import json
+
+formated_data = []
+for entry in data:
+    entry_list = []
+    prefix_list = [entry.get('customerid'), True if entry.get('isvip') else False]
+    for k in entry.keys():
+        if 'site' in k:
+            for timestamp in entry[k]:
+                tmp = [k, timestamp]
+                entry_list.append(prefix_list + tmp)
+    formated_data.extend(entry_list)
+
+print(formated_data)
+
+df = pd.DataFrame(formated_data, columns=['customerid', 'isvip', 'siteid', 'timestamp'])
+print(df)
