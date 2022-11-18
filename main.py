@@ -771,7 +771,6 @@ class Window(QMainWindow):
             self.DialogViztopo.show()
             self.DialogViztopo.verticalLayoutMain.addWidget(self.spectrum.plot_topomap())
 
-
 class Dataset:
     def __init__(self, path, name, dstype, doi, authors):
         self.path = path
