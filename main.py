@@ -561,12 +561,12 @@ class Window(QMainWindow):
 
     def importTmpData(self):
         self.rawTmp = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
-        fig = self.rawTmp.plot(duration=10, n_channels=20, block=False, color='blue', show_options=False)
+        fig = self.rawTmp.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=False)
         fig.fake_keypress('a')
         return fig
 
     def importRawBids(self, bids_path):
-        new_annot = mne.io.kit.read_mrk('config/hed.mrk')
+        # new_annot = mne.io.kit.read_mrk('config/hed.mrk')
         self.raw = read_raw_bids(bids_path=bids_path, verbose=True)
         #raw = mne.io.read_raw_edf(file_name, preload=True, stim_channel='auto', verbose=True)
         data = self.raw.get_data()
@@ -616,7 +616,7 @@ class Window(QMainWindow):
     def exploreRawData(self):
         print("Plotting EEG data")
         set_browser_backend("qt")
-        fig = self.raw.plot(duration=10, n_channels=20, block=False, color='blue', show_options=True)
+        fig = self.raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=True)
         fig.fake_keypress('a')
         return fig
 
