@@ -566,6 +566,7 @@ class Window(QMainWindow):
         return fig
 
     def importRawBids(self, bids_path):
+        new_annot = mne.io.kit.read_mrk('config/hed.mrk')
         self.raw = read_raw_bids(bids_path=bids_path, verbose=True)
         #raw = mne.io.read_raw_edf(file_name, preload=True, stim_channel='auto', verbose=True)
         data = self.raw.get_data()

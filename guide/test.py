@@ -19,9 +19,4 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 plt.switch_backend('Qt5Agg')
 
-saving = uic.loadUi("Saving.ui")
-saving.setWindowFlag(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
-saving.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-movieSaving = QMovie('images/icons/saving.gif')
-saving.labelLoading.setMovie(movieSaving)
-saving.labelLoading.setScaledContents(True)
+new_annot = mne.io.kit.read_mrk('config/hed.mrk')
