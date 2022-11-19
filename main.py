@@ -4,6 +4,7 @@ import os
 import sys
 from datetime import timedelta
 import time
+import json
 
 import mne
 import pyautogui
@@ -114,6 +115,13 @@ class Window(QMainWindow):
         # self.MainUi.button_psd.setEnabled(False)
         self.MainUi.button_topomap.clicked.connect(self.computeTopoMapAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_topomap)
+
+        self.MainUi.button_sensors = QToolButton(self)
+        self.MainUi.button_sensors.setIcon(QIcon('images/icons/sensors.png'))
+        # self.MainUi.button_topomap.setCheckable(True)
+        # self.MainUi.button_psd.setEnabled(False)
+        self.MainUi.button_sensors.clicked.connect(self.plotSensorsAction)
+        self.MainUi.toolBar.addWidget(self.MainUi.button_sensors)
 
         # toolbar = QToolBar("My main toolbar")
         # toolbar.setIconSize(QSize(16, 16))
@@ -598,11 +606,13 @@ class Window(QMainWindow):
                         onset.append(annotation[0])
                         duration.append(annotation[1])
                         description.append(annotation[2])
+            with open('config/annotation.json', 'r') as f:
+                json_data = json.load(f)
+            for annotation in json_data['annotations']:
+                    onset.append(annotation['onset'])
+                    duration.append(annotation['duration'])
+                    description.append(annotation['description'])
             # Setting new annotations
-            meas_date = self.raw.info['meas_date']
-            orig_time = self.raw.annotations.orig_time
-            time_format = '%Y-%m-%d %H:%M:%S.%f'
-            new_orig_time = (meas_date + timedelta(seconds=50)).strftime(time_format)
             old_annotations = self.raw.annotations
             new_annotations = mne.Annotations(onset=onset,
                                               duration=duration,
@@ -616,7 +626,8 @@ class Window(QMainWindow):
     def exploreRawData(self):
         print("Plotting EEG data")
         set_browser_backend("qt")
-        fig = self.raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=True)
+        fig = self.raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=True,
+                            title=("Participant: %s" % self.DataList[self.currentPart]))
         fig.fake_keypress('a')
         return fig
 
@@ -750,26 +761,32 @@ class Window(QMainWindow):
             msg.close()
 
     def computePSDAction(self):
+        # self.DialogViz = uic.loadUi("guide/DialogViz.ui")
         print('Computing PSD')
         if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
             self.spectrum = self.rawTmp.compute_psd()
         else:
             self.spectrum = self.raw.compute_psd()
         set_browser_backend("qt")
+        # self.DialogViz.show()
         fig_psd = self.spectrum.plot(show=True)
         fig_ave = self.spectrum.plot(color='blue', show=True, average=True)
-        self.DialogViz = uic.loadUi("guide/DialogViz.ui")
-        self.DialogViz.show()
-        set_browser_backend("qt")
-        self.DialogViz.verticalLayoutMain.addWidget(fig_psd)
-        self.DialogViz.verticalLayoutMain.addWidget(fig_ave)
+        # self.DialogViz.verticalLayoutMain.addWidget(fig_psd)
+        # self.DialogViz.verticalLayoutMain.addWidget(fig_ave)
 
     def computeTopoMapAction(self):
         if self.spectrum:
             self.spectrum.plot_topomap()
-            self.DialogViztopo = uic.loadUi("guide/DialogViz.ui")
-            self.DialogViztopo.show()
-            self.DialogViztopo.verticalLayoutMain.addWidget(self.spectrum.plot_topomap())
+            # self.DialogViztopo = uic.loadUi("guide/DialogViz.ui")
+            # self.DialogViztopo.show()
+            # self.DialogViztopo.verticalLayoutMain.addWidget()
+
+    def plotSensorsAction(self):
+        print('Plotting Sensors')
+        if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
+            self.rawTmp.plot_sensors(ch_type='eeg')
+        else:
+            self.raw.plot_sensors(ch_type='eeg')
 
 class Dataset:
     def __init__(self, path, name, dstype, doi, authors):

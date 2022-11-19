@@ -23,18 +23,4 @@ import json
 with open('../config/annotation.json', 'r') as f:
     json_data = json.load(f)
 
-formated_data = []
-for entry in json_data:
-    entry_list = []
-    prefix_list = [entry.get('annotations'), True if entry.get('isvip') else False]
-    for k in entry.keys():
-        if 'site' in k:
-            for timestamp in entry[k]:
-                tmp = [k, timestamp]
-                entry_list.append(prefix_list + tmp)
-    formated_data.extend(entry_list)
-
-print(formated_data)
-
-df = pd.DataFrame(formated_data, columns=['customerid', 'isvip', 'siteid', 'timestamp'])
-print(df)
+print(json_data['annotations'])
