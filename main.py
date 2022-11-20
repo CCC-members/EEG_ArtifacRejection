@@ -13,6 +13,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QMovie, QAction
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QGroupBox, \
     QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QDialog
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from mne.viz import set_browser_backend
 
 mne.set_log_level('warning')
@@ -44,8 +45,8 @@ class Window(QMainWindow):
     def initUI(self):
         self.MainUi = uic.loadUi("guide/MainApplication.ui")
         self.MainUi.show()
-        width, height = pyautogui.size()
-        self.MainUi.setGeometry(0, 0, width, height)
+        self.width, self.height = pyautogui.size()
+        self.MainUi.setGeometry(0, 0, self.width, self.height)
         self.MainUi.pushButtonSave.clicked.connect(lambda: self.WizardSave())
         self.MainUi.pushButtonSaveAll.clicked.connect(lambda: self.WizardSaveAll())
         self.MainUi.pushButtonBackAll.clicked.connect(lambda: self.WizardBackAll())
@@ -122,6 +123,13 @@ class Window(QMainWindow):
         # self.MainUi.button_psd.setEnabled(False)
         self.MainUi.button_sensors.clicked.connect(self.plotSensorsAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_sensors)
+
+        self.MainUi.button_covM = QToolButton(self)
+        self.MainUi.button_covM.setIcon(QIcon('images/icons/cov_matrix.png'))
+        # self.MainUi.button_topomap.setCheckable(True)
+        # self.MainUi.button_psd.setEnabled(False)
+        self.MainUi.button_covM.clicked.connect(self.plotCovMatrixAction)
+        self.MainUi.toolBar.addWidget(self.MainUi.button_covM)
 
         # toolbar = QToolBar("My main toolbar")
         # toolbar.setIconSize(QSize(16, 16))
@@ -761,32 +769,65 @@ class Window(QMainWindow):
             msg.close()
 
     def computePSDAction(self):
-        # self.DialogViz = uic.loadUi("guide/DialogViz.ui")
+        self.DialogViz = uic.loadUi("guide/DialogViz.ui")
+        self.DialogViz.setWindowTitle("Power Spectrum Density")
         print('Computing PSD')
         if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
             self.spectrum = self.rawTmp.compute_psd()
         else:
             self.spectrum = self.raw.compute_psd()
         set_browser_backend("qt")
-        # self.DialogViz.show()
-        fig_psd = self.spectrum.plot(show=True)
-        fig_ave = self.spectrum.plot(color='blue', show=True, average=True)
-        # self.DialogViz.verticalLayoutMain.addWidget(fig_psd)
-        # self.DialogViz.verticalLayoutMain.addWidget(fig_ave)
+        self.DialogViz.setGeometry(200, 200, 900, 700)
+        self.DialogViz.show()
+        fig_psd = self.spectrum.plot(show=False)
+        fig_ave = self.spectrum.plot(color='blue', show=False, average=True)
+        self.DialogViz.verticalLayoutMain.addWidget(FigureCanvasQTAgg(fig_psd))
+        self.DialogViz.verticalLayoutMain.addWidget(FigureCanvasQTAgg(fig_ave))
 
     def computeTopoMapAction(self):
+        print('Plotting spectrum topomap')
         if self.spectrum:
-            self.spectrum.plot_topomap()
-            # self.DialogViztopo = uic.loadUi("guide/DialogViz.ui")
-            # self.DialogViztopo.show()
-            # self.DialogViztopo.verticalLayoutMain.addWidget()
+            fig = self.spectrum.plot_topomap(show=False)
+            self.DialogViztopo = uic.loadUi("guide/DialogViz.ui")
+            self.DialogViztopo.setWindowTitle("Spectrum topomap")
+            self.DialogViztopo.setGeometry(0, 200, self.width, 350)
+            self.DialogViztopo.show()
+            self.DialogViztopo.verticalLayoutMain.addWidget(FigureCanvasQTAgg(fig))
 
     def plotSensorsAction(self):
         print('Plotting Sensors')
         if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
-            self.rawTmp.plot_sensors(ch_type='eeg')
+            fig = self.rawTmp.plot_sensors(ch_type='eeg', show=False, show_names=True)
         else:
-            self.raw.plot_sensors(ch_type='eeg')
+            fig = self.raw.plot_sensors(ch_type='eeg', show=False, show_names=True)
+        self.DialogVizSen = uic.loadUi("guide/DialogViz.ui")
+
+        self.DialogVizSen.setWindowTitle("Sensors")
+        self.DialogVizSen.show()
+        self.DialogVizSen.verticalLayoutMain.addWidget(FigureCanvasQTAgg(fig))
+
+    def plotCovMatrixAction(self):
+        self.movieLoading.start()
+        self.loading.show()
+        print('Covariance matrices')
+        if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
+            data = self.rawTmp
+        else:
+            data = self.raw
+        data.set_eeg_reference('average', projection=True)
+        data.info['bads'] = [
+            bb for bb in data.info['bads'] if 'EEG' not in bb]
+        data.add_proj(
+            [pp.copy() for pp in data.info['projs'] if 'EEG' not in pp['desc']])
+        noise_cov = mne.compute_raw_covariance(data, tmin=0, tmax=None)
+        figures = noise_cov.plot(data.info, proj=True, show=False)
+        self.loading.close()
+        self.DialogVizCov = uic.loadUi("guide/DialogViz.ui")
+        self.DialogVizCov.setWindowTitle("Covariance matrices")
+        self.DialogVizCov.show()
+        for fig in figures:
+            self.DialogVizCov.verticalLayoutMain.addWidget(FigureCanvasQTAgg(fig))
+
 
 class Dataset:
     def __init__(self, path, name, dstype, doi, authors):
