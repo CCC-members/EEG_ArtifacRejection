@@ -131,6 +131,13 @@ class Window(QMainWindow):
         self.MainUi.button_covM.clicked.connect(self.plotCovMatrixAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_covM)
 
+        self.MainUi.button_events = QToolButton(self)
+        self.MainUi.button_events.setIcon(QIcon('images/icons/event.png'))
+        # self.MainUi.button_topomap.setCheckable(True)
+        # self.MainUi.button_psd.setEnabled(False)
+        self.MainUi.button_events.clicked.connect(self.plotEventsAction)
+        self.MainUi.toolBar.addWidget(self.MainUi.button_events)
+
         # toolbar = QToolBar("My main toolbar")
         # toolbar.setIconSize(QSize(16, 16))
         # self.addToolBar(toolbar)
@@ -801,7 +808,6 @@ class Window(QMainWindow):
         else:
             fig = self.raw.plot_sensors(ch_type='eeg', show=False, show_names=True)
         self.DialogVizSen = uic.loadUi("guide/DialogViz.ui")
-
         self.DialogVizSen.setWindowTitle("Sensors")
         self.DialogVizSen.show()
         self.DialogVizSen.verticalLayoutMain.addWidget(FigureCanvasQTAgg(fig))
@@ -828,6 +834,19 @@ class Window(QMainWindow):
         for fig in figures:
             self.DialogVizCov.verticalLayoutMain.addWidget(FigureCanvasQTAgg(fig))
 
+    def plotEventsAction(self):
+        if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
+            data = self.rawTmp
+        else:
+            data = self.raw
+        print("sfreq: " + str(data.info['sfreq']))
+        events = mne.events_from_annotations(data)
+        fig = mne.viz.plot_events(events, sfreq=data.info['sfreq'],
+                                  first_samp=data.first_samp)
+        self.DialogVizEvent = uic.loadUi("guide/DialogViz.ui")
+        self.DialogVizEvent.setWindowTitle("Sensors")
+        self.DialogVizEvent.show()
+        self.DialogVizEvent.verticalLayoutMain.addWidget(FigureCanvasQTAgg(fig))
 
 class Dataset:
     def __init__(self, path, name, dstype, doi, authors):
