@@ -1,11 +1,6 @@
 {
   "annotations":[
                   {
-                    "description": "Biological-artifact",
-                    "onset": 0,
-                    "duration": 0
-                  },
-                  {
                     "description": "EEG-artifact",
                     "onset": 0,
                     "duration": 0
@@ -82,11 +77,6 @@
                   },
                   {
                     "description": "EMG-artifact",
-                    "onset": 0,
-                    "duration": 0
-                  },
-                  {
-                    "description": "Non-biological-artifact",
                     "onset": 0,
                     "duration": 0
                   },

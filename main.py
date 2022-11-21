@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMes
     QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QDialog
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from mne.viz import set_browser_backend
-
+import numpy as np
 mne.set_log_level('warning')
 from mne_bids import (read_raw_bids, BIDSPath)
 from pathlib import Path
@@ -94,12 +94,43 @@ class Window(QMainWindow):
         self.MainUi.actionExit.setShortcut("Ctrl+Q")
         self.MainUi.actionExit.triggered.connect(lambda: self.exitAction())
 
+        self.MainUi.actionAnnotation_mode.triggered.connect(
+            lambda: self.onAnnotationMode(self.MainUi.actionAnnotation_mode.isChecked()))
+
+        if self.MainUi.actionAnnotation_mode.isChecked:
+            self.annotationMode = True
+            self.MainUi.actionDsNew.setEnabled(False)
+            self.MainUi.actionDsLoad.setEnabled(False)
+            self.MainUi.actionPtNew.setEnabled(False)
+            self.MainUi.actionPtLoad.setEnabled(False)
+            self.MainUi.toolBar.setEnabled(False)
+
+        # Test Load Dataset
+        self.MainUi.actionLoad_Dataset.triggered.connect(lambda: self.loadDatasetMock())
+
+    def onAnnotationMode(self, checked):
+        if checked:
+            self.annotationMode = True
+            self.MainUi.actionDsNew.setEnabled(False)
+            self.MainUi.actionDsLoad.setEnabled(False)
+            self.MainUi.actionPtNew.setEnabled(False)
+            self.MainUi.actionPtLoad.setEnabled(False)
+            self.MainUi.toolBar.setEnabled(False)
+        else:
+            self.annotationMode = False
+            self.MainUi.actionDsNew.setEnabled(True)
+            self.MainUi.actionDsLoad.setEnabled(True)
+            self.MainUi.actionPtNew.setEnabled(True)
+            self.MainUi.actionPtLoad.setEnabled(True)
+            self.MainUi.toolBar.setEnabled(True)
+
     # Tools Box
     def onToolsBar(self):
         self.MainUi.button_raw = QToolButton(self)
         self.MainUi.button_raw.setIcon(QIcon('images/icons/raw_data.png'))
         self.MainUi.button_raw.setCheckable(True)
         self.MainUi.button_raw.setEnabled(False)
+        self.MainUi.button_raw.setStatusTip("Show raw data")
         self.MainUi.button_raw.clicked.connect(self.showRawDataAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_raw)
 
@@ -107,34 +138,39 @@ class Window(QMainWindow):
         self.MainUi.button_psd.setIcon(QIcon('images/icons/psd.png'))
         # self.MainUi.button_psd.setCheckable(True)
         # self.MainUi.button_psd.setEnabled(False)
+        self.MainUi.button_psd.setStatusTip("Compute PSD")
         self.MainUi.button_psd.clicked.connect(self.computePSDAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_psd)
 
         self.MainUi.button_topomap = QToolButton(self)
         self.MainUi.button_topomap.setIcon(QIcon('images/icons/topomap.png'))
         # self.MainUi.button_topomap.setCheckable(True)
-        # self.MainUi.button_psd.setEnabled(False)
+        # self.MainUi.button_topomap.setEnabled(False)
+        self.MainUi.button_topomap.setStatusTip("Plot Spectrum Topomap")
         self.MainUi.button_topomap.clicked.connect(self.computeTopoMapAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_topomap)
 
         self.MainUi.button_sensors = QToolButton(self)
         self.MainUi.button_sensors.setIcon(QIcon('images/icons/sensors.png'))
-        # self.MainUi.button_topomap.setCheckable(True)
-        # self.MainUi.button_psd.setEnabled(False)
+        # self.MainUi.button_sensors.setCheckable(True)
+        # self.MainUi.button_sensors.setEnabled(False)
+        self.MainUi.button_sensors.setStatusTip("Plot Spectrum Topomap")
         self.MainUi.button_sensors.clicked.connect(self.plotSensorsAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_sensors)
 
         self.MainUi.button_covM = QToolButton(self)
         self.MainUi.button_covM.setIcon(QIcon('images/icons/cov_matrix.png'))
-        # self.MainUi.button_topomap.setCheckable(True)
-        # self.MainUi.button_psd.setEnabled(False)
+        # self.MainUi.button_covM.setCheckable(True)
+        # self.MainUi.button_covM.setEnabled(False)
+        self.MainUi.button_covM.setStatusTip("Compute covariance matrix")
         self.MainUi.button_covM.clicked.connect(self.plotCovMatrixAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_covM)
 
         self.MainUi.button_events = QToolButton(self)
         self.MainUi.button_events.setIcon(QIcon('images/icons/event.png'))
-        # self.MainUi.button_topomap.setCheckable(True)
-        # self.MainUi.button_psd.setEnabled(False)
+        # self.MainUi.button_events.setCheckable(True)
+        # self.MainUi.button_events.setEnabled(False)
+        self.MainUi.button_events.setStatusTip("Show events")
         self.MainUi.button_events.clicked.connect(self.plotEventsAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_events)
 
@@ -423,17 +459,28 @@ class Window(QMainWindow):
         labels = participants[0]
         del participants[0]
         subject = participants[0][0].replace('sub-', '')
-        self.Dataset.bids_path = BIDSPath(subject=subject, session=session, task=task, acquisition=acquisition, run=run,
-                                          processing=processing, recording=recording, space=space, split=split,
-                                          description=description, root=root, suffix=suffix, extension=extension,
-                                          datatype=datatype, check=check)
+
         try:
+            self.Dataset.bids_path = BIDSPath(subject=subject, session=session, task=task, acquisition=acquisition, run=run,
+                                              processing=processing, recording=recording, space=space, split=split,
+                                              description=description, root=root, suffix=suffix, extension=extension,
+                                              datatype=datatype, check=check)
             self.raw = read_raw_bids(bids_path=self.Dataset.bids_path, verbose=True)
             msg = QMessageBox()
             msg.setWindowTitle("Dataset descriptors")
             msg.setIcon(QMessageBox.Icon.Information)
             msg.setText("Notification")
             msg.setInformativeText("The Dataset structure was checked successfully.<br>")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+            return
+        except ValueError as ve:
+            msg = QMessageBox()
+            msg.setWindowTitle("Value error")
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("Notification")
+            msg.setInformativeText(str(ve))
             msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
@@ -464,23 +511,6 @@ class Window(QMainWindow):
                 participants.append(rowfile[0].split('\t'))
         labels = participants[0]
         del participants[0]
-        # # printing data line by line
-        # indecesRm = []
-        # nb_row = len(participants)
-        # nb_col = len(participants[0])
-        # for row in range(nb_row):
-        #     for col in range(nb_col):
-        #         if col % nb_col == 0:
-        #             participantPath = Path(os.path.join(bidsPath, str(participants[row][col])))
-        #             if not participantPath.exists() or not list(participantPath.rglob('*.edf')) \
-        #                     or not list(participantPath.rglob('*electrodes.tsv')) \
-        #                     or not list(participantPath.rglob('*channels.tsv')) \
-        #                     or not list(participantPath.rglob('*events.tsv')):
-        #                 self.rejectedPart.append(str(participants[row][col]))
-        #                 indecesRm.append(row)
-        # for i in sorted(indecesRm, reverse=True):
-        #     del participants[i]
-
         nb_row = len(participants)
         nb_col = len(participants[0])
         self.dsPartUi.tableParticipants.setRowCount(nb_row)
@@ -547,8 +577,8 @@ class Window(QMainWindow):
             self.panelWizard()
 
     def panelWizard(self):
-        self.movieLoading.start()
-        self.loading.show()
+        # self.movieLoading.start()
+        # self.loading.show()
         subject = self.DataList[self.currentPart]
         subID = subject.replace('sub-', '')
         print('-->> Importing subject: ' + subID)
@@ -580,7 +610,7 @@ class Window(QMainWindow):
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
         self.checkWizardOptions()
-        self.loading.close()
+        # self.loading.close()
 
     def importTmpData(self):
         self.rawTmp = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
@@ -603,24 +633,31 @@ class Window(QMainWindow):
             oldname = self.raw.ch_names[electrode]
             newname = oldname.replace('-REF', '', 1)
             self.raw.rename_channels({oldname : newname}, allow_duplicates=False, verbose=None)
-        #montage = mne.channels.make_standard_montage('standard_1005')
-        #print("This the montage {}", montage.ch_names)
-        #raw.set_montage(montage, on_missing='ignore')
-
-        # Getting derivatives
-        derivativesPath = Path(os.path.join(bids_path.root, 'derivatives'))
-        derivativesFiles = list(derivativesPath.rglob('*' + bids_path.subject + '*annotations.tsv'))
-        if derivativesFiles:
-            onset = []
-            duration = []
-            description = []
-            with open(derivativesFiles[0]) as file:
-                for rowfile in csv.reader(file):
-                    annotation = rowfile[0].split('\t')
-                    if annotation[0] != 'onset' and annotation[1] != 'duration':
-                        onset.append(annotation[0])
-                        duration.append(annotation[1])
-                        description.append(annotation[2])
+        onset = []
+        duration = []
+        description = []
+        if not self.annotationMode:
+            events, events_id = mne.events_from_annotations(self.raw)
+            self.events = events
+            self.events_id = events_id
+            # Getting derivatives
+            derivativesPath = Path(os.path.join(bids_path.root, 'derivatives'))
+            derivativesFiles = list(derivativesPath.rglob('*' + bids_path.subject + '*annotations.tsv'))
+            if derivativesFiles:
+                with open(derivativesFiles[0]) as file:
+                    for rowfile in csv.reader(file):
+                        annotation = rowfile[0].split('\t')
+                        if annotation[0] != 'onset' and annotation[1] != 'duration':
+                            onset.append(annotation[0])
+                            duration.append(annotation[1])
+                            description.append(annotation[2])
+                old_annotations = self.raw.annotations
+                new_annotations = mne.Annotations(onset=onset,
+                                                  duration=duration,
+                                                  description=description,
+                                                  orig_time=self.raw.annotations[0]['orig_time'])
+                self.raw.set_annotations(old_annotations + new_annotations)
+        else:
             with open('config/annotation.json', 'r') as f:
                 json_data = json.load(f)
             for annotation in json_data['annotations']:
@@ -634,9 +671,6 @@ class Window(QMainWindow):
                                               description=description,
                                               orig_time=self.raw.annotations[0]['orig_time'])
             self.raw.set_annotations(old_annotations + new_annotations)
-        # events, events_id = mne.events_from_annotations(self.raw)
-        # mne.viz.plot_events(events, events_id, sfreq=50)
-        #raw.plot_psd(fmax=50)
 
     def exploreRawData(self):
         print("Plotting EEG data")
@@ -652,7 +686,10 @@ class Window(QMainWindow):
             self.MainUi.horizontalLayoutMain.addWidget(self.exploreRawData())
         else:
             for i in reversed(range(self.MainUi.horizontalLayoutMain.count())):
-                self.MainUi.horizontalLayoutMain.itemAt(-1).widget().deleteLater()
+                if self.MainUi.horizontalLayoutMain.itemAt(i).widget():
+                    self.MainUi.horizontalLayoutMain.itemAt(i).widget().setParent(None)
+                else:
+                    self.MainUi.horizontalLayoutMain.removeItem(self.MainUi.horizontalLayoutMain.itemAt(i))
                 break
 
     def checkWizardOptions(self):
@@ -713,7 +750,9 @@ class Window(QMainWindow):
         print('Temporal data saved.')
 
     def WizardSave(self):
-        print('Save all')
+        if self.annotationMode:
+            self.saveAnnotations()
+        print('Save')
 
     def WizardSaveAll(self):
         print('Save all')
@@ -756,7 +795,9 @@ class Window(QMainWindow):
             print("Printing annotation after fig")
             interactive_annot = self.raw.annotations
             print(interactive_annot.description)
-            self.raw.annotations.save(str("annotations.txt"), overwrite=True)
+            self.WizardSaveTmp()
+            self.rawTmp = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
+            self.rawTmp.annotations.save(str("annotations.csv"), overwrite=True)
             msg.close()
         else:
             msg.close()
@@ -839,14 +880,32 @@ class Window(QMainWindow):
             data = self.rawTmp
         else:
             data = self.raw
-        print("sfreq: " + str(data.info['sfreq']))
-        events = mne.events_from_annotations(data)
-        fig = mne.viz.plot_events(events, sfreq=data.info['sfreq'],
-                                  first_samp=data.first_samp)
+        fig = mne.viz.plot_events(self.events, sfreq=200,
+                                  first_samp=self.raw.first_samp, event_id=self.events_id, show=False)
         self.DialogVizEvent = uic.loadUi("guide/DialogViz.ui")
-        self.DialogVizEvent.setWindowTitle("Sensors")
+        self.DialogVizEvent.setWindowTitle("Events")
         self.DialogVizEvent.show()
         self.DialogVizEvent.verticalLayoutMain.addWidget(FigureCanvasQTAgg(fig))
+
+    def loadDatasetMock(self):
+        self.Dataset = Dataset('/mnt/Store/Data/CHBM/ds_bids_cbm_loris_24_11_21',
+                               'Dataset containing Cuban Human Brain Mapping database',
+                               'raw', 'https://doi.org/10.7303/syn22324937',
+                               ["Pedro A.Valdes-Sosa", "Lidice Galan-Garcia", "Jorge Bosch-Bayard", "Maria L. Bringas-Vega",
+                                   "Eduardo Aubert-Vazquez", "Iris Rodriguez-Gil", "Samir Das", "Cecile Madjar",
+                                   "Trinidad Virues-Alba", "Zia Mohades", "Leigh C. MacIntyre", "Christine Rogers",
+                                   "Shawn Brown", "Lourdes Valdes-Urrutia", "Alan C. Evans", "Mitchell J. Valdes-Sosa" ])
+        self.DataList = ['CBM00001', 'CBM00002', 'CBM00003', 'CBM00004', 'CBM00005', 'CBM00006']
+        self.currentPart = 0
+        subject, session, task, acquisition, run, processing, recording, space, split, description, root, \
+        suffix, extension, datatype, check = None, None, None, None, None, None, None, None, None, None, None, None, \
+                                             None, None, True
+        self.Dataset.bids_path = BIDSPath(subject=self.DataList[0], session=session, task='protmap', acquisition=acquisition, run=run,
+                                          processing=processing, recording=recording, space=space, split=split,
+                                          description=description, root=self.Dataset.path, suffix='eeg', extension='.edf',
+                                          datatype='eeg', check=check)
+        self.panelWizard()
+        print('check')
 
 class Dataset:
     def __init__(self, path, name, dstype, doi, authors):

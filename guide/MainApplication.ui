@@ -247,10 +247,17 @@
      <addaction name="actionPtNew"/>
      <addaction name="actionPtLoad"/>
     </widget>
+    <widget class="QMenu" name="menuTest">
+     <property name="title">
+      <string>Test</string>
+     </property>
+     <addaction name="actionLoad_Dataset"/>
+    </widget>
     <addaction name="actionNew"/>
     <addaction name="menuDataset"/>
     <addaction name="menuParticipants"/>
     <addaction name="actionExit"/>
+    <addaction name="menuTest"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -267,10 +274,17 @@
      <string>Help</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuConfiguration">
+    <property name="title">
+     <string>Configuration</string>
+    </property>
+    <addaction name="actionAnnotation_mode"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuTools"/>
    <addaction name="menuHelp"/>
+   <addaction name="menuConfiguration"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">
@@ -312,6 +326,22 @@
   <action name="actionExit">
    <property name="text">
     <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionLoad_Dataset">
+   <property name="text">
+    <string>Load Dataset</string>
+   </property>
+  </action>
+  <action name="actionAnnotation_mode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Annotation mode</string>
    </property>
   </action>
  </widget>
