@@ -42,7 +42,6 @@ class Window(QMainWindow):
         # Saving
         # self.savingDialog()
 
-
     def initUI(self):
         self.MainUi = uic.loadUi("guide/MainApplication.ui")
         self.MainUi.show()
@@ -175,35 +174,13 @@ class Window(QMainWindow):
         self.MainUi.button_events.clicked.connect(self.plotEventsAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_events)
 
-        # toolbar = QToolBar("My main toolbar")
-        # toolbar.setIconSize(QSize(16, 16))
-        # self.addToolBar(toolbar)
-        #
-        # button_action = QAction(QIcon('images/icons/arrow.png'), "Your button", self)
-        # button_action.setStatusTip("This is your button")
-        # # button_action.triggered.connect()
-        # button_action.setCheckable(True)
-        # toolbar.addAction(button_action)
-        # toolbar.addSeparator()
-        # button_action = QAction(QIcon('images/icons/calendar.png'), "Your button", self)
-        # button_action.setStatusTip("This is your button")
-        # button_action.triggered.connect(self.onMyToolBarButtonClick)
-        # # button_action.setCheckable(True)
-        # toolbar.addAction(button_action)
-        # # Annotation button action
-        # toolbar.addSeparator()
-        # button_annot = QAction(QIcon('images/icons/annotate.png'), "Annotation", self)
-        # button_annot.setStatusTip("Add annotations to the data")
-        # button_annot.triggered.connect(self.onMyToolBarButtonClickAnnot)
-        # # button_annot.setCheckable(True)
-        # toolbar.addAction(button_annot)
-        # # Save button action
-        # button_annot = QAction(QIcon('images/icons/save.png'), "Save", self)
-        # button_annot.setStatusTip("Save annotations to the data")
-        # button_annot.triggered.connect(self.onMyToolBarButtonClickSave)
-        # # button_annot.setCheckable(True)
-        # toolbar.addAction(button_annot)
-        # self.setStatusBar(QStatusBar(self))
+        self.MainUi.button_ica = QToolButton(self)
+        self.MainUi.button_ica.setIcon(QIcon('images/icons/ica.png'))
+        # self.MainUi.button_events.setCheckable(True)
+        # self.MainUi.button_events.setEnabled(False)
+        self.MainUi.button_ica.setStatusTip("Show events")
+        self.MainUi.button_ica.clicked.connect(self.plotICAAction)
+        self.MainUi.toolBar.addWidget(self.MainUi.button_ica)
 
     def loadingDialog(self):
         self.loading = uic.loadUi("guide/Loading.ui")
@@ -227,7 +204,6 @@ class Window(QMainWindow):
         fileName, _ = QFileDialog.getOpenFileName(self, "QFileDialog.getOpenFileName()", "",
                                                  "All Files (*);;Python Files (*.py);;EEG Files (*.edf)",
                                                 options=options)
-
         fileName = '/mnt/Store/Data/CHBM/ds_bids_cbm_loris_24_11_21'
         #fileName = '/mnt/Store/Data/CHBM/ds_bids_cbm_loris_24_11_21/sub-CBM00001/eeg/sub-CBM00001_task-protmap_eeg.edf'
         if fileName:
@@ -279,7 +255,8 @@ class Window(QMainWindow):
                 groupBox = QGroupBox("Authors: ")
                 groupBox.setLayout(formLayout)
                 self.lds.scrollAreaAuth.setWidget(groupBox)
-                self.Dataset = Dataset(folder, ds_descrip['Name'], ds_descrip['DatasetType'], ds_descrip['DatasetDOI'], ds_descrip['Authors'])
+                self.Dataset = Dataset(folder, ds_descrip['Name'], ds_descrip['DatasetType'], ds_descrip['DatasetDOI'],
+                                       ds_descrip['Authors'])
             else:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Warning)
@@ -462,10 +439,10 @@ class Window(QMainWindow):
         subject = participants[0][0].replace('sub-', '')
 
         try:
-            self.Dataset.bids_path = BIDSPath(subject=subject, session=session, task=task, acquisition=acquisition, run=run,
-                                              processing=processing, recording=recording, space=space, split=split,
-                                              description=description, root=root, suffix=suffix, extension=extension,
-                                              datatype=datatype, check=check)
+            self.Dataset.bids_path = BIDSPath(subject=subject, session=session, task=task, acquisition=acquisition,
+                                              run=run, processing=processing, recording=recording, space=space,
+                                              split=split, description=description, root=root, suffix=suffix,
+                                              extension=extension, datatype=datatype, check=check)
             self.raw = read_raw_bids(bids_path=self.Dataset.bids_path, verbose=True)
             msg = QMessageBox()
             msg.setWindowTitle("Dataset descriptors")
@@ -622,7 +599,8 @@ class Window(QMainWindow):
 
     def importTmpData(self):
         self.rawTmp = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
-        mneQtBrowser = self.rawTmp.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=False)
+        mneQtBrowser = self.rawTmp.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red',
+                                        show_options=False)
         mneQtBrowser.fake_keypress('a')
         return mneQtBrowser
 
@@ -631,6 +609,7 @@ class Window(QMainWindow):
         self.raw = read_raw_bids(bids_path=bids_path, verbose=True)
         #raw = mne.io.read_raw_edf(file_name, preload=True, stim_channel='auto', verbose=True)
         data = self.raw.get_data()
+        self.raw.load_data()
         # you can get the metadata included in the file and a list of all channels:
         info = self.raw.info
         channels = self.raw.ch_names
@@ -672,8 +651,8 @@ class Window(QMainWindow):
     def exploreRawData(self):
         print("Plotting EEG data")
         set_browser_backend("qt")
-        mneQtBrowser = self.raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=True,
-                                     title=("Participant: %s" % self.DataList[self.currentPart]))
+        mneQtBrowser = self.raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red',
+                                     show_options=True, title=("Participant: %s" % self.DataList[self.currentPart]))
         mneQtBrowser.fake_keypress('a')
         return mneQtBrowser
 
@@ -890,24 +869,55 @@ class Window(QMainWindow):
         self.DialogVizEvent.show()
         self.DialogVizEvent.verticalLayoutMain.addWidget(FigureCanvasQTAgg(fig))
 
+    def plotICAAction(self):
+        self.raw.filter(l_freq=1, h_freq=50)
+        events, event_id = mne.events_from_annotations(self.raw)
+        epochs_ica = mne.Epochs(self.raw, events=events, event_id=event_id, preload=True)
+        n_components = 0.8
+        method = 'picard'
+        max_iter = 100
+        fit_params = dict(fastica_it=5)
+        random_state = 42
+        ica = mne.preprocessing.ICA(n_components=n_components, method=method, max_iter=max_iter,
+                                    fit_params=fit_params,random_state=random_state)
+        ica.fit(epochs_ica)
+        ica.plot_components()
+
+        # ica = mne.preprocessing.ICA(n_components=20, random_state=97, max_iter=800)
+        # ica.fit(self.raw)
+        # ica.exclude = [1, 2]  # details on how we picked these are omitted here
+        # ica.plot_properties(self.raw, picks=ica.exclude)
+        #
+        # orig_raw = self.raw.copy()
+        # self.raw.load_data()
+        # ica.apply(self.raw)
+        #
+        # # show some frontal channels to clearly illustrate the artifact removal
+        # chs = self.raw.ch_names
+        # chan_idxs = [self.raw.ch_names.index(ch) for ch in chs]
+        # orig_raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=True)
+        # self.raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=True)
+
     def loadDatasetMock(self):
         self.Dataset = Dataset('/mnt/Store/Data/CHBM/ds_bids_cbm_loris_24_11_21',
                                'Dataset containing Cuban Human Brain Mapping database',
                                'raw', 'https://doi.org/10.7303/syn22324937',
-                               ["Pedro A.Valdes-Sosa", "Lidice Galan-Garcia", "Jorge Bosch-Bayard", "Maria L. Bringas-Vega",
-                                   "Eduardo Aubert-Vazquez", "Iris Rodriguez-Gil", "Samir Das", "Cecile Madjar",
-                                   "Trinidad Virues-Alba", "Zia Mohades", "Leigh C. MacIntyre", "Christine Rogers",
-                                   "Shawn Brown", "Lourdes Valdes-Urrutia", "Alan C. Evans", "Mitchell J. Valdes-Sosa" ])
+                               ["Pedro A.Valdes-Sosa", "Lidice Galan-Garcia", "Jorge Bosch-Bayard",
+                                "Maria L. Bringas-Vega", "Eduardo Aubert-Vazquez", "Iris Rodriguez-Gil",
+                                "Samir Das", "Cecile Madjar", "Trinidad Virues-Alba", "Zia Mohades",
+                                "Leigh C. MacIntyre", "Christine Rogers", "Shawn Brown", "Lourdes Valdes-Urrutia",
+                                "Alan C. Evans", "Mitchell J. Valdes-Sosa"])
         self.DataList = ['CBM00001', 'CBM00002', 'CBM00003', 'CBM00004', 'CBM00005', 'CBM00006']
         self.currentPart = 0
         subject, session, task, acquisition, run, processing, recording, space, split, description, root, \
         suffix, extension, datatype, check = None, None, None, None, None, None, None, None, None, None, None, None, \
                                              None, None, True
-        self.Dataset.bids_path = BIDSPath(subject=self.DataList[0], session=session, task='protmap', acquisition=acquisition, run=run,
-                                          processing=processing, recording=recording, space=space, split=split,
-                                          description=description, root=self.Dataset.path, suffix='eeg', extension='.edf',
-                                          datatype='eeg', check=check)
+        self.Dataset.bids_path = BIDSPath(subject=self.DataList[0], session=session, task='protmap',
+                                          acquisition=acquisition, run=run,processing=processing, recording=recording,
+                                          space=space, split=split,description=description, root=self.Dataset.path,
+                                          suffix='eeg', extension='.edf', datatype='eeg', check=check)
         self.panelWizard()
+
         print('check')
 
 class Dataset:
