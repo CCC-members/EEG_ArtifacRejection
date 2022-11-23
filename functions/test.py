@@ -30,11 +30,17 @@ import numpy as np
 x = np.linspace(0, 2 * np.pi, 400)
 y = np.sin(x ** 2)
 
-fig, (ax1, ax2) = plt.subplots(2)
-fig.suptitle('Vertically stacked subplots')
-ax1.plot(x, y)
-ax2.plot(x, -y)
-DialogViz = uic.loadUi("../guide/DialogViz.ui")
-DialogViz.show()
-DialogViz.verticalLayoutMain.addWidget(FigureCanvasQTAgg())
-time.sleep(10)
+# importing the module
+import pandas as pd
+
+# creating some sample data
+sample = {'name': ['a', 'b', 'c', 'd'],
+          'age': [24, 65, 39, 18]}
+
+# creating the DataFrame
+df = pd.DataFrame(sample)
+
+# displaying the DataFrame
+print(df)
+
+df.to_csv('example.tsv', sep="\t")

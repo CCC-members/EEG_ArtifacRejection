@@ -12,10 +12,11 @@ from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QMovie, QAction
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QGroupBox, \
-    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QDialog
+    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QDialog, QWidgetItem
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from mne.viz import set_browser_backend
 import numpy as np
+import pandas as pd
 mne.set_log_level('warning')
 from mne_bids import (read_raw_bids, BIDSPath)
 from pathlib import Path
@@ -592,12 +593,19 @@ class Window(QMainWindow):
             if subID in self.Dataset.tmpRaws:
                 print('Loading tmp data')
                 self.MainUi.button_raw.setEnabled(True)
-                self.MainUi.horizontalLayoutMain.addWidget(self.importTmpData())
+                mneQtBrowser = self.importTmpData()
             else:
                 print('Loading raw data')
                 self.MainUi.button_raw.setEnabled(False)
                 self.importRawBids(self.Dataset.bids_path)
-                self.MainUi.horizontalLayoutMain.addWidget(self.exploreRawData())
+                mneQtBrowser = self.exploreRawData()
+            if self.annotationMode:
+                layout = mneQtBrowser.mne.fig_annotation.widget().layout()
+                for i in range(layout.count()):
+                    if i > 0 and i < 4:
+                        item = layout.itemAt(i)
+                        item.widget().setHidden(True)
+            self.MainUi.horizontalLayoutMain.addWidget(mneQtBrowser)
         except FileNotFoundError as fe:
             msg = QMessageBox()
             msg.setWindowTitle("Participants selection")
@@ -614,9 +622,9 @@ class Window(QMainWindow):
 
     def importTmpData(self):
         self.rawTmp = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
-        fig = self.rawTmp.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=False)
-        fig.fake_keypress('a')
-        return fig
+        mneQtBrowser = self.rawTmp.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=False)
+        mneQtBrowser.fake_keypress('a')
+        return mneQtBrowser
 
     def importRawBids(self, bids_path):
         # new_annot = mne.io.kit.read_mrk('config/hed.mrk')
@@ -636,6 +644,7 @@ class Window(QMainWindow):
         onset = []
         duration = []
         description = []
+        ch_names = []
         if not self.annotationMode:
             events, events_id = mne.events_from_annotations(self.raw)
             self.events = events
@@ -644,41 +653,29 @@ class Window(QMainWindow):
             derivativesPath = Path(os.path.join(bids_path.root, 'derivatives'))
             derivativesFiles = list(derivativesPath.rglob('*' + bids_path.subject + '*annotations.tsv'))
             if derivativesFiles:
+                new_annotations = self.raw.annotations
                 with open(derivativesFiles[0]) as file:
                     for rowfile in csv.reader(file):
                         annotation = rowfile[0].split('\t')
                         if annotation[0] != 'onset' and annotation[1] != 'duration':
-                            onset.append(annotation[0])
-                            duration.append(annotation[1])
-                            description.append(annotation[2])
-                old_annotations = self.raw.annotations
-                new_annotations = mne.Annotations(onset=onset,
-                                                  duration=duration,
-                                                  description=description,
-                                                  orig_time=self.raw.annotations[0]['orig_time'])
-                self.raw.set_annotations(old_annotations + new_annotations)
+                            new_annotations.append(annotation[0], annotation[1], annotation[2])
+                self.raw.set_annotations(new_annotations)
         else:
+            new_annotations = mne.Annotations(onset=[], duration=[], description=[])
             with open('config/annotation.json', 'r') as f:
                 json_data = json.load(f)
             for annotation in json_data['annotations']:
-                    onset.append(annotation['onset'])
-                    duration.append(annotation['duration'])
-                    description.append(annotation['description'])
+                    new_annotations.append(annotation['onset'], annotation['duration'], annotation['description'])
             # Setting new annotations
-            old_annotations = self.raw.annotations
-            new_annotations = mne.Annotations(onset=onset,
-                                              duration=duration,
-                                              description=description,
-                                              orig_time=self.raw.annotations[0]['orig_time'])
-            self.raw.set_annotations(old_annotations + new_annotations)
+            self.raw.set_annotations(new_annotations)
 
     def exploreRawData(self):
         print("Plotting EEG data")
         set_browser_backend("qt")
-        fig = self.raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=True,
-                            title=("Participant: %s" % self.DataList[self.currentPart]))
-        fig.fake_keypress('a')
-        return fig
+        mneQtBrowser = self.raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=True,
+                                     title=("Participant: %s" % self.DataList[self.currentPart]))
+        mneQtBrowser.fake_keypress('a')
+        return mneQtBrowser
 
     def showRawDataAction(self, checked):
         if checked:
@@ -750,6 +747,7 @@ class Window(QMainWindow):
         print('Temporal data saved.')
 
     def WizardSave(self):
+        self.WizardSaveTmp()
         if self.annotationMode:
             self.saveAnnotations()
         print('Save')
@@ -791,16 +789,21 @@ class Window(QMainWindow):
         msg.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
         ans = msg.exec()
         if ans == QMessageBox.Save:
-            msg.setText("Saving annotations...")
             print("Printing annotation after fig")
-            interactive_annot = self.raw.annotations
-            print(interactive_annot.description)
-            self.WizardSaveTmp()
             self.rawTmp = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
-            self.rawTmp.annotations.save(str("annotations.csv"), overwrite=True)
-            msg.close()
-        else:
-            msg.close()
+            annotations = self.rawTmp.annotations
+            indeces = []
+            i = 0
+            for annotation in annotations:
+                if annotation['duration'] == 0.0:
+                    indeces.append(i)
+                    i += 1
+            annotations.delete(indeces)
+            df = pd.DataFrame(annotations)
+            del df['orig_time']
+            new_bids_path = self.Dataset.bids_path
+            annotBidsPath = new_bids_path.update(suffix='events', extension='.tsv')
+            df.to_csv(new_bids_path.basename, sep="\t", index=False)
 
     def exitAction(self):
         msg = QMessageBox()
