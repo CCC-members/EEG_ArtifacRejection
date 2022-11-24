@@ -136,51 +136,56 @@ class Window(QMainWindow):
 
         self.MainUi.button_psd = QToolButton(self)
         self.MainUi.button_psd.setIcon(QIcon('images/icons/psd.png'))
-        # self.MainUi.button_psd.setCheckable(True)
-        # self.MainUi.button_psd.setEnabled(False)
+        self.MainUi.button_psd.setEnabled(False)
         self.MainUi.button_psd.setStatusTip("Compute PSD")
         self.MainUi.button_psd.clicked.connect(self.computePSDAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_psd)
 
         self.MainUi.button_topomap = QToolButton(self)
         self.MainUi.button_topomap.setIcon(QIcon('images/icons/topomap.png'))
-        # self.MainUi.button_topomap.setCheckable(True)
-        # self.MainUi.button_topomap.setEnabled(False)
+        self.MainUi.button_topomap.setEnabled(False)
         self.MainUi.button_topomap.setStatusTip("Plot Spectrum Topomap")
         self.MainUi.button_topomap.clicked.connect(self.computeTopoMapAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_topomap)
 
         self.MainUi.button_sensors = QToolButton(self)
         self.MainUi.button_sensors.setIcon(QIcon('images/icons/sensors.png'))
-        # self.MainUi.button_sensors.setCheckable(True)
-        # self.MainUi.button_sensors.setEnabled(False)
+        self.MainUi.button_sensors.setEnabled(False)
         self.MainUi.button_sensors.setStatusTip("Plot Spectrum Topomap")
         self.MainUi.button_sensors.clicked.connect(self.plotSensorsAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_sensors)
 
         self.MainUi.button_covM = QToolButton(self)
         self.MainUi.button_covM.setIcon(QIcon('images/icons/cov_matrix.png'))
-        # self.MainUi.button_covM.setCheckable(True)
-        # self.MainUi.button_covM.setEnabled(False)
+        self.MainUi.button_covM.setEnabled(False)
         self.MainUi.button_covM.setStatusTip("Compute covariance matrix")
         self.MainUi.button_covM.clicked.connect(self.plotCovMatrixAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_covM)
 
         self.MainUi.button_events = QToolButton(self)
         self.MainUi.button_events.setIcon(QIcon('images/icons/event.png'))
-        # self.MainUi.button_events.setCheckable(True)
-        # self.MainUi.button_events.setEnabled(False)
+        self.MainUi.button_events.setEnabled(False)
         self.MainUi.button_events.setStatusTip("Show events")
         self.MainUi.button_events.clicked.connect(self.plotEventsAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_events)
 
         self.MainUi.button_ica = QToolButton(self)
         self.MainUi.button_ica.setIcon(QIcon('images/icons/ica.png'))
-        # self.MainUi.button_events.setCheckable(True)
-        # self.MainUi.button_events.setEnabled(False)
-        self.MainUi.button_ica.setStatusTip("Show events")
+        self.MainUi.button_ica.setEnabled(False)
+        self.MainUi.button_ica.setStatusTip("Compute Independent Components Analysis")
         self.MainUi.button_ica.clicked.connect(self.plotICAAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_ica)
+
+    def checkToolsBarOptions(self, show):
+        if self.annotationMode:
+            show = False
+        self.MainUi.button_psd.setEnabled(show)
+        self.MainUi.button_topomap.setEnabled(show)
+        self.MainUi.button_sensors.setEnabled(show)
+        self.MainUi.button_covM.setEnabled(show)
+        self.MainUi.button_events.setEnabled(show)
+        self.MainUi.button_ica.setEnabled(show)
+
 
     def loadingDialog(self):
         self.loading = uic.loadUi("guide/Loading.ui")
@@ -560,7 +565,8 @@ class Window(QMainWindow):
         subject = self.DataList[self.currentPart]
         subID = subject.replace('sub-', '')
         print('-->> Importing subject: ' + subID)
-        self.MainUi.labelTitle.setText('Participant: ' + subID)
+        self.MainUi.labelTitle = QLabel('Participant: ' + subID + '.')
+        self.MainUi.labelOptions = QLabel('Options: ')
         self.Dataset.bids_path.update(subject=subID)
         # Importing EEG
         try:
@@ -582,7 +588,10 @@ class Window(QMainWindow):
                     if i > 0 and i < 4:
                         item = layout.itemAt(i)
                         item.widget().setHidden(True)
+                layout.insertWidget(0, self.MainUi.labelTitle)
+                layout.insertWidget(1, self.MainUi.labelOptions)
             self.MainUi.horizontalLayoutMain.addWidget(mneQtBrowser)
+            self.checkToolsBarOptions(True)
         except FileNotFoundError as fe:
             msg = QMessageBox()
             msg.setWindowTitle("Participants selection")
@@ -594,6 +603,7 @@ class Window(QMainWindow):
             msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
+            self.checkToolsBarOptions(False)
         self.checkWizardOptions()
         # self.loading.close()
 
@@ -816,6 +826,10 @@ class Window(QMainWindow):
 
     def computeTopoMapAction(self):
         print('Plotting spectrum topomap')
+        if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
+            self.spectrum = self.rawTmp.compute_psd()
+        else:
+            self.spectrum = self.raw.compute_psd()
         if self.spectrum:
             fig = self.spectrum.plot_topomap(show=False)
             self.DialogViztopo = uic.loadUi("guide/DialogViz.ui")
@@ -823,6 +837,17 @@ class Window(QMainWindow):
             self.DialogViztopo.setGeometry(0, 200, self.width, 350)
             self.DialogViztopo.show()
             self.DialogViztopo.verticalLayoutMain.addWidget(FigureCanvasQTAgg(fig))
+
+    def computeERP_F(self):
+        if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
+            data = self.rawTmp.compute_psd()
+        else:
+            data = self.raw.compute_psd()
+        ecg_epochs = mne.preprocessing.create_ecg_epochs(data)
+        ecg_epochs.plot_image(combine='mean')
+        avg_ecg_epochs = ecg_epochs.average().apply_baseline((-0.5, -0.2))
+        avg_ecg_epochs.plot_topomap(times=np.linspace(-0.05, 0.05, 11))
+        avg_ecg_epochs.plot_joint(times=[-0.25, -0.025, 0, 0.025, 0.25])
 
     def plotSensorsAction(self):
         print('Plotting Sensors')
@@ -917,6 +942,7 @@ class Window(QMainWindow):
                                           space=space, split=split,description=description, root=self.Dataset.path,
                                           suffix='eeg', extension='.edf', datatype='eeg', check=check)
         self.panelWizard()
+
 
         print('check')
 
