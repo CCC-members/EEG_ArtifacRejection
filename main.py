@@ -10,7 +10,7 @@ import mne
 import pyautogui
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon, QMovie, QAction
+from PyQt6.QtGui import QIcon, QMovie, QAction, QFont
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QGroupBox, \
     QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QDialog, QWidgetItem
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
@@ -66,6 +66,14 @@ class Window(QMainWindow):
 
     # Menu Bar
     def onMenuBar(self):
+        # Session Action
+        self.MainUi.actionSessionOpen.setIcon(QIcon('images/icons/login.png'))
+        self.MainUi.actionSessionOpen.setStatusTip('Open a session')
+        self.MainUi.actionSessionOpen.triggered.connect(lambda: self.openSession())
+        self.MainUi.actionSessionClose.setIcon(QIcon('images/icons/logout.png'))
+        self.MainUi.actionSessionClose.setStatusTip('Close session')
+        self.MainUi.actionSessionClose.triggered.connect(lambda: self.closeSession())
+
         # Dataset Action
         self.MainUi.actionDsNew.setIcon(QIcon('images/icons/dataset.png'))
         self.MainUi.actionDsNew.setStatusTip('New Dataset')
@@ -107,6 +115,20 @@ class Window(QMainWindow):
 
         # Test Load Dataset
         self.MainUi.actionLoad_Dataset.triggered.connect(lambda: self.loadDatasetMock())
+
+    def openSession(self):
+        print("Open session")
+        self.loginUI = uic.loadUi("guide/Login.ui")
+        self.loginUI.labelCreateSession.linkActivated.connect(self.createSession)
+        self.loginUI.show()
+
+    def createSession(self):
+        print("Create session")
+        self.createSessionUI = uic.loadUi("guide/CreateSession.ui")
+        self.createSessionUI.show()
+
+    def closeSession(self):
+        print("Close session")
 
     def onAnnotationMode(self, checked):
         if checked:
@@ -566,7 +588,7 @@ class Window(QMainWindow):
         subID = subject.replace('sub-', '')
         print('-->> Importing subject: ' + subID)
         self.MainUi.labelTitle = QLabel('Participant: ' + subID + '.')
-        self.MainUi.labelOptions = QLabel('Options: ')
+        self.MainUi.labelTitle.setFont(QFont('Arial', 14, QFont.Weight.Bold))
         self.Dataset.bids_path.update(subject=subID)
         # Importing EEG
         try:
@@ -589,7 +611,6 @@ class Window(QMainWindow):
                         item = layout.itemAt(i)
                         item.widget().setHidden(True)
                 layout.insertWidget(0, self.MainUi.labelTitle)
-                layout.insertWidget(1, self.MainUi.labelOptions)
             self.MainUi.horizontalLayoutMain.addWidget(mneQtBrowser)
             self.checkToolsBarOptions(True)
         except FileNotFoundError as fe:
@@ -954,6 +975,14 @@ class Dataset:
         self.doi = doi
         self.authors = authors
         self.tmpRaws = {}
+
+class Session:
+    def __init__(self, username, password, fullname, organization, last_login):
+        self.username = username
+        self.password = password
+        self.fullname = fullname
+        self.organization = organization
+        self.last_login = last_login
 
 # application
 if __name__ == "__main__":

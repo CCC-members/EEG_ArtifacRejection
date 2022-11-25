@@ -252,6 +252,15 @@
      </property>
      <addaction name="actionLoad_Dataset"/>
     </widget>
+    <widget class="QMenu" name="menuSession">
+     <property name="title">
+      <string>Session</string>
+     </property>
+     <addaction name="separator"/>
+     <addaction name="actionSessionOpen"/>
+     <addaction name="actionSessionClose"/>
+    </widget>
+    <addaction name="menuSession"/>
     <addaction name="actionNew"/>
     <addaction name="menuDataset"/>
     <addaction name="menuParticipants"/>
@@ -443,6 +452,16 @@
    </property>
    <property name="text">
     <string>Apply ICA</string>
+   </property>
+  </action>
+  <action name="actionSessionOpen">
+   <property name="text">
+    <string>Open</string>
+   </property>
+  </action>
+  <action name="actionSessionClose">
+   <property name="text">
+    <string>Close</string>
    </property>
   </action>
  </widget>

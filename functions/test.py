@@ -10,7 +10,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QMovie, QAction
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QGroupBox, \
-    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget
+    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QVBoxLayout
 from mne.viz import set_browser_backend
 
 mne.set_log_level('warning')
@@ -26,21 +26,54 @@ plt.switch_backend('Qt5Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Some example data to display
-x = np.linspace(0, 2 * np.pi, 400)
-y = np.sin(x ** 2)
+from PyQt6.QtWidgets import QApplication, QWidget, QLabel
+from PyQt6.QtGui import QFont, QFontDatabase
+import sys
 
-# importing the module
-import pandas as pd
 
-# creating some sample data
-sample = {'name': ['a', 'b', 'c', 'd'],
-          'age': [24, 65, 39, 18]}
+def window():
+    app = QApplication(sys.argv)
+    win = QWidget()
 
-# creating the DataFrame
-df = pd.DataFrame(sample)
+    l1 = QLabel()
+    l2 = QLabel()
+    l3 = QLabel()
+    l4 = QLabel()
 
-# displaying the DataFrame
-print(df)
+    l1.setText("Hello World")
+    l4.setText("TutorialsPoint")
+    l2.setText("welcome to Python GUI Programming")
 
-df.to_csv('example.tsv', sep="\t")
+
+
+    vbox = QVBoxLayout()
+    vbox.addWidget(l1)
+    vbox.addStretch()
+    vbox.addWidget(l2)
+    vbox.addStretch()
+    vbox.addWidget(l3)
+    vbox.addStretch()
+    vbox.addWidget(l4)
+
+    l1.setOpenExternalLinks(True)
+    l4.linkActivated.connect(clicked)
+    l2.linkHovered.connect(hovered)
+    win.setLayout(vbox)
+
+    win.setWindowTitle("QLabel Demo")
+    win.show()
+    sys.exit(app.exec())
+
+
+def hovered():
+    print
+    "hovering"
+
+
+def clicked():
+    print
+    "clicked"
+
+
+if __name__ == '__main__':
+    window()
