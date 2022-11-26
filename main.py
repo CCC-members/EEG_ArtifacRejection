@@ -6,7 +6,7 @@ from datetime import timedelta
 import time
 import json
 import re
-
+from string import (punctuation, whitespace, digits, ascii_lowercase, ascii_uppercase)
 import mne
 import pyautogui
 from PyQt6 import uic
@@ -198,6 +198,12 @@ class Window(QMainWindow):
         unStyle = self.createSessionUI.lineEditUsername.styleSheet()
         self.createSessionUI.lineEditUsername.textChanged.connect(
             lambda: self.checkUsername(self.createSessionUI.lineEditUsername, unStyle))
+        unStyle = self.createSessionUI.lineEditPassword.styleSheet()
+        self.createSessionUI.lineEditPassword.textChanged.connect(
+            lambda: self.checkPassword(self.createSessionUI.lineEditPassword, unStyle))
+        unStyle = self.createSessionUI.lineEditPassword.styleSheet()
+        self.createSessionUI.lineEditRepPassword.textChanged.connect(
+            lambda: self.checkRepPassword(self.createSessionUI.lineEditRepPassword, unStyle))
         eStyle = self.createSessionUI.lineEditEmail.styleSheet()
         self.createSessionUI.lineEditEmail.textChanged.connect(
             lambda: self.checkEmail(self.createSessionUI.lineEditEmail, eStyle))
@@ -233,8 +239,61 @@ class Window(QMainWindow):
         else:
             tWidget.setStyleSheet("border: 1px solid red; color: red")
             self.createSessionUI.labelCheckField.setText("Invalid username")
-    def checkPassword(self):
-        print("Check Password")
+
+    def checkPassword(self, tWidget, oStyle ):
+        password = tWidget.text()
+        MIN_SIZE = 8
+        MAX_SIZE = 20
+        password_size = len(password)
+        if password_size < MIN_SIZE or password_size > MAX_SIZE:
+            tWidget.setStyleSheet("border: 1px solid red; color: red")
+            self.createSessionUI.labelCheckField.setText("Password should have 8-20 characters")
+            return False
+        valid_chars = {'-', '_', '.', '!', '@', '#', '$', '^', '&', '(', ')', '*'}
+        invalid_chars = set(punctuation + whitespace) - valid_chars
+        for char in invalid_chars:
+            if char in password:
+                tWidget.setStyleSheet("border: 1px solid red; color: red")
+                self.createSessionUI.labelCheckField.setText("Typing a wrong character")
+                return False
+        password_has_digit = False
+        for char in password:
+            if char in digits:
+                password_has_digit = True
+                break
+        if not password_has_digit:
+            tWidget.setStyleSheet("border: 1px solid red; color: red")
+            self.createSessionUI.labelCheckField.setText("Password should have one digit")
+            return False
+        password_has_lowercase = False
+        for char in password:
+            if char in ascii_lowercase:
+                password_has_lowercase = True
+                break
+        if not password_has_lowercase:
+            tWidget.setStyleSheet("border: 1px solid red; color: red")
+            self.createSessionUI.labelCheckField.setText("Password should have lowercase char")
+            return False
+        password_has_uppercase = False
+        for char in password:
+            if char in ascii_uppercase:
+                password_has_uppercase = True
+                break
+        if not password_has_uppercase:
+            tWidget.setStyleSheet("border: 1px solid red; color: red")
+            self.createSessionUI.labelCheckField.setText("Password should have uppercase char")
+            return False
+        tWidget.setStyleSheet(oStyle)
+        self.createSessionUI.labelCheckField.setText("")
+        return True
+
+    def checkRepPassword(self, tWidget, oStyle):
+        if tWidget.text() == self.createSessionUI.lineEditPassword.text():
+            tWidget.setStyleSheet(oStyle)
+            self.createSessionUI.labelCheckField.setText("")
+        else:
+            tWidget.setStyleSheet("border: 1px solid red; color: red")
+            self.createSessionUI.labelCheckField.setText("The passwords are not the same")
 
     def checkEmail(self, tWidget, oStyle):
         regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
@@ -1004,7 +1063,7 @@ class Window(QMainWindow):
         # self.raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=True)
 
     def loadDatasetMock(self):
-        self.Dataset = Dataset('/mnt/Store/Data/Annotations/BIDS_example/ds_bids_cbm10',
+        self.Dataset = Dataset('/mnt/Store/Data/CHBM/ds_bids_cbm_loris_24_11_21',
                                'Dataset containing Cuban Human Brain Mapping database',
                                'raw', 'https://doi.org/10.7303/syn22324937',
                                ["Pedro A.Valdes-Sosa", "Lidice Galan-Garcia", "Jorge Bosch-Bayard",
