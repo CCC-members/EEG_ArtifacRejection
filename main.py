@@ -4,9 +4,11 @@ import os
 import sys
 from datetime import timedelta
 import time
+from datetime import datetime
 import json
 import re
 from string import (punctuation, whitespace, digits, ascii_lowercase, ascii_uppercase)
+from cryptography.fernet import Fernet
 import mne
 import pyautogui
 from PyQt6 import uic
@@ -212,16 +214,34 @@ class Window(QMainWindow):
         self.createSessionUI.show()
 
     def actionCreateSession(self):
-        print("Create session")
+        checktext = self.createSessionUI.labelCheckField.text()
         username = self.createSessionUI.lineEditUsername.text()
         password = self.createSessionUI.lineEditPassword.text()
         fullname = self.createSessionUI.lineEditFullname.text()
         email = self.createSessionUI.lineEditEmail.text()
         organization = self.createSessionUI.lineEditOrganization.text()
-        now = time.now()
+        now = datetime.now()
         current_time = now.strftime("%H:%M:%S")
-        self.session = Session(username, password, fullname, email, organization, current_time)
-
+        if checktext == '' and username != '' and password != '' and fullname != '' and email != '' and organization != '':
+            self.session = Session(username, password, fullname, email, organization, current_time)
+            self.createSessionUI.close()
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setText("Notification")
+            msg.setInformativeText("Session created successfully. Please login")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+            self.loginUI.show()
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("Notification")
+            msg.setInformativeText("Please fill all the required fields.")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+            
     def checkFullname(self, tWidget, oStyle):
         regex = re.compile(r"^[\-'a-zA-Z ]+$")
         if re.fullmatch(regex, tWidget.text()):
@@ -1113,10 +1133,11 @@ class Dataset:
         self.tmpRaws = {}
 
 class Session:
-    def __init__(self, username, password, fullname, organization, last_login):
+    def __init__(self, username, password, fullname, email, organization, last_login):
         self.username = username
         self.password = password
         self.fullname = fullname
+        self.email = email
         self.organization = organization
         self.last_login = last_login
         self.data = []
