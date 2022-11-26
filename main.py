@@ -5,6 +5,7 @@ import sys
 from datetime import timedelta
 import time
 import json
+import re
 
 import mne
 import pyautogui
@@ -12,7 +13,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QMovie, QAction, QFont
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QGroupBox, \
-    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QDialog, QWidgetItem
+    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QDialog, QWidgetItem, QLineEdit
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from mne.viz import set_browser_backend
 import numpy as np
@@ -116,36 +117,6 @@ class Window(QMainWindow):
         # Test Load Dataset
         self.MainUi.actionLoad_Dataset.triggered.connect(lambda: self.loadDatasetMock())
 
-    def openSession(self):
-        print("Open session")
-        self.loginUI = uic.loadUi("guide/Login.ui")
-        self.loginUI.labelCreateSession.linkActivated.connect(self.createSession)
-        self.loginUI.show()
-
-    def createSession(self):
-        print("Create session")
-        self.createSessionUI = uic.loadUi("guide/CreateSession.ui")
-        self.createSessionUI.show()
-
-    def closeSession(self):
-        print("Close session")
-
-    def onAnnotationMode(self, checked):
-        if checked:
-            self.annotationMode = True
-            self.MainUi.actionDsNew.setEnabled(False)
-            self.MainUi.actionDsLoad.setEnabled(False)
-            self.MainUi.actionPtNew.setEnabled(False)
-            self.MainUi.actionPtLoad.setEnabled(False)
-            self.MainUi.toolBar.setEnabled(False)
-        else:
-            self.annotationMode = False
-            self.MainUi.actionDsNew.setEnabled(True)
-            self.MainUi.actionDsLoad.setEnabled(True)
-            self.MainUi.actionPtNew.setEnabled(True)
-            self.MainUi.actionPtLoad.setEnabled(True)
-            self.MainUi.toolBar.setEnabled(True)
-
     # Tools Box
     def onToolsBar(self):
         self.MainUi.button_raw = QToolButton(self)
@@ -208,6 +179,94 @@ class Window(QMainWindow):
         self.MainUi.button_events.setEnabled(show)
         self.MainUi.button_ica.setEnabled(show)
 
+    def openSession(self):
+        print("Open session")
+        self.loginUI = uic.loadUi("guide/Login.ui")
+        self.loginUI.labelCreateSession.setText("<a href='self.createSession'>Create a new session</a>")
+        self.loginUI.labelCreateSession.linkActivated.connect(self.actionRergisterSession)
+        self.loginUI.pushButtonLogin.clicked.connect(lambda: self.actionLogin())
+        self.loginUI.pushButtonCancel.clicked.connect(lambda: self.createSessionUI.close())
+        self.loginUI.show()
+
+    def actionRergisterSession(self):
+        print("Create session")
+        self.loginUI.close()
+        self.createSessionUI = uic.loadUi("guide/CreateSession.ui")
+        fnStyle = self.createSessionUI.lineEditFullname.styleSheet()
+        self.createSessionUI.lineEditFullname.textChanged.connect(
+            lambda: self.checkFullname(self.createSessionUI.lineEditFullname, fnStyle))
+        unStyle = self.createSessionUI.lineEditUsername.styleSheet()
+        self.createSessionUI.lineEditUsername.textChanged.connect(
+            lambda: self.checkUsername(self.createSessionUI.lineEditUsername, unStyle))
+        eStyle = self.createSessionUI.lineEditEmail.styleSheet()
+        self.createSessionUI.lineEditEmail.textChanged.connect(
+            lambda: self.checkEmail(self.createSessionUI.lineEditEmail, eStyle))
+        self.createSessionUI.pushButtonCancel.clicked.connect(lambda: self.createSessionUI.close())
+        self.createSessionUI.pushButtonCreate.clicked.connect(lambda: self.actionCreateSession())
+        self.createSessionUI.show()
+
+    def actionCreateSession(self):
+        print("Create session")
+        username = self.createSessionUI.lineEditUsername.text()
+        password = self.createSessionUI.lineEditPassword.text()
+        fullname = self.createSessionUI.lineEditFullname.text()
+        email = self.createSessionUI.lineEditEmail.text()
+        organization = self.createSessionUI.lineEditOrganization.text()
+        now = time.now()
+        current_time = now.strftime("%H:%M:%S")
+        self.session = Session(username, password, fullname, email, organization, current_time)
+
+    def checkFullname(self, tWidget, oStyle):
+        regex = re.compile(r"^[\-'a-zA-Z ]+$")
+        if re.fullmatch(regex, tWidget.text()):
+            tWidget.setStyleSheet(oStyle)
+            self.createSessionUI.labelCheckField.setText("")
+        else:
+            tWidget.setStyleSheet("border: 1px solid red; color: red")
+            self.createSessionUI.labelCheckField.setText("Invalid fullname")
+
+    def checkUsername(self, tWidget, oStyle):
+        regex = r'^[A-Za-z]{3}[A-Za-z0-9._%+-]*$'
+        if re.fullmatch(regex, tWidget.text()):
+            tWidget.setStyleSheet(oStyle)
+            self.createSessionUI.labelCheckField.setText("")
+        else:
+            tWidget.setStyleSheet("border: 1px solid red; color: red")
+            self.createSessionUI.labelCheckField.setText("Invalid username")
+    def checkPassword(self):
+        print("Check Password")
+
+    def checkEmail(self, tWidget, oStyle):
+        regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        if re.fullmatch(regex, tWidget.text()):
+            tWidget.setStyleSheet(oStyle)
+            self.createSessionUI.labelCheckField.setText("")
+        else:
+            tWidget.setStyleSheet("border: 1px solid red; color: red")
+            self.createSessionUI.labelCheckField.setText("Invalid email address")
+
+    def closeSession(self):
+        print("Close session")
+
+    def actionLogin(self):
+        print("Login session")
+
+    # Checking annotation mode
+    def onAnnotationMode(self, checked):
+        if checked:
+            self.annotationMode = True
+            self.MainUi.actionDsNew.setEnabled(False)
+            self.MainUi.actionDsLoad.setEnabled(False)
+            self.MainUi.actionPtNew.setEnabled(False)
+            self.MainUi.actionPtLoad.setEnabled(False)
+            self.MainUi.toolBar.setEnabled(False)
+        else:
+            self.annotationMode = False
+            self.MainUi.actionDsNew.setEnabled(True)
+            self.MainUi.actionDsLoad.setEnabled(True)
+            self.MainUi.actionPtNew.setEnabled(True)
+            self.MainUi.actionPtLoad.setEnabled(True)
+            self.MainUi.toolBar.setEnabled(True)
 
     def loadingDialog(self):
         self.loading = uic.loadUi("guide/Loading.ui")
@@ -945,7 +1004,7 @@ class Window(QMainWindow):
         # self.raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=True)
 
     def loadDatasetMock(self):
-        self.Dataset = Dataset('/mnt/Store/Data/CHBM/ds_bids_cbm_loris_24_11_21',
+        self.Dataset = Dataset('/mnt/Store/Data/Annotations/BIDS_example/ds_bids_cbm10',
                                'Dataset containing Cuban Human Brain Mapping database',
                                'raw', 'https://doi.org/10.7303/syn22324937',
                                ["Pedro A.Valdes-Sosa", "Lidice Galan-Garcia", "Jorge Bosch-Bayard",
@@ -954,7 +1013,6 @@ class Window(QMainWindow):
                                 "Leigh C. MacIntyre", "Christine Rogers", "Shawn Brown", "Lourdes Valdes-Urrutia",
                                 "Alan C. Evans", "Mitchell J. Valdes-Sosa"])
         self.DataList = ['CBM00001', 'CBM00002', 'CBM00003', 'CBM00004', 'CBM00005', 'CBM00006']
-        self.currentPart = 0
         subject, session, task, acquisition, run, processing, recording, space, split, description, root, \
         suffix, extension, datatype, check = None, None, None, None, None, None, None, None, None, None, None, None, \
                                              None, None, True
@@ -962,6 +1020,25 @@ class Window(QMainWindow):
                                           acquisition=acquisition, run=run,processing=processing, recording=recording,
                                           space=space, split=split,description=description, root=self.Dataset.path,
                                           suffix='eeg', extension='.edf', datatype='eeg', check=check)
+        # self.Dataset = Dataset('/mnt/Store/Data/Annotations/BIDS_example/BIDS_EEG/BIDS_Artifacts_Example',
+        #                        'Dataset containing Cuban Human Brain Mapping database',
+        #                        'raw', 'https://doi.org/10.7303/syn22324937',
+        #                        ["Pedro A.Valdes-Sosa", "Lidice Galan-Garcia", "Jorge Bosch-Bayard",
+        #                         "Maria L. Bringas-Vega", "Eduardo Aubert-Vazquez", "Iris Rodriguez-Gil",
+        #                         "Samir Das", "Cecile Madjar", "Trinidad Virues-Alba", "Zia Mohades",
+        #                         "Leigh C. MacIntyre", "Christine Rogers", "Shawn Brown", "Lourdes Valdes-Urrutia",
+        #                         "Alan C. Evans", "Mitchell J. Valdes-Sosa"])
+        # self.DataList = ['00000254', '00000297', '00000458', '00000630', '00000647', '00000715']
+        # subject, session, task, acquisition, run, processing, recording, space, split, description, root, \
+        # suffix, extension, datatype, check = None, None, None, None, None, None, None, None, None, None, None, None, \
+        #                                      None, None, True
+        # self.Dataset.bids_path = BIDSPath(subject=self.DataList[0], session='s005', task='rest',
+        #                                   acquisition=acquisition, run='000', processing=processing,
+        #                                   recording=recording,
+        #                                   space=space, split=split, description=description, root=self.Dataset.path,
+        #                                   suffix='eeg', extension='.edf', datatype='eeg', check=check)
+
+        self.currentPart = 0
         self.panelWizard()
 
 
@@ -983,6 +1060,7 @@ class Session:
         self.fullname = fullname
         self.organization = organization
         self.last_login = last_login
+        self.data = []
 
 # application
 if __name__ == "__main__":
