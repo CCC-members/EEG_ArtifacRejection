@@ -13,6 +13,9 @@ from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMes
     QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QVBoxLayout
 from mne.viz import set_browser_backend
 
+from main import Session
+from main import CustomEncoder
+
 mne.set_log_level('warning')
 from mne_bids import (read_raw_bids, BIDSPath)
 from pathlib import Path
@@ -31,49 +34,9 @@ from PyQt6.QtGui import QFont, QFontDatabase
 import sys
 
 
-def window():
-    app = QApplication(sys.argv)
-    win = QWidget()
+session = Session('ariosky', 'AASLASKLA', 'Ariosky Areces Gonzalez', 'ariosky@neuroinformatics-collaboratory.org',
+                  'UESTC', '12/05/2022', 'djkhsfry4387hfoiue935478fh3874t4')
 
-    l1 = QLabel()
-    l2 = QLabel()
-    l3 = QLabel()
-    l4 = QLabel()
+jsonStr = json.dumps(session, indent=4, cls=CustomEncoder)
 
-    l1.setText("Hello World")
-    l4.setText("TutorialsPoint")
-    l2.setText("welcome to Python GUI Programming")
-
-
-
-    vbox = QVBoxLayout()
-    vbox.addWidget(l1)
-    vbox.addStretch()
-    vbox.addWidget(l2)
-    vbox.addStretch()
-    vbox.addWidget(l3)
-    vbox.addStretch()
-    vbox.addWidget(l4)
-
-    l1.setOpenExternalLinks(True)
-    l4.linkActivated.connect(clicked)
-    l2.linkHovered.connect(hovered)
-    win.setLayout(vbox)
-
-    win.setWindowTitle("QLabel Demo")
-    win.show()
-    sys.exit(app.exec())
-
-
-def hovered():
-    print
-    "hovering"
-
-
-def clicked():
-    print
-    "clicked"
-
-
-if __name__ == '__main__':
-    window()
+print(jsonStr)

@@ -187,7 +187,7 @@ class Window(QMainWindow):
         self.loginUI.labelCreateSession.setText("<a href='self.createSession'>Create a new session</a>")
         self.loginUI.labelCreateSession.linkActivated.connect(self.actionRergisterSession)
         self.loginUI.pushButtonLogin.clicked.connect(lambda: self.actionLogin())
-        self.loginUI.pushButtonCancel.clicked.connect(lambda: self.createSessionUI.close())
+        self.loginUI.pushButtonCancel.clicked.connect(lambda: self.loginUI.close())
         self.loginUI.show()
 
     def actionRergisterSession(self):
@@ -217,13 +217,21 @@ class Window(QMainWindow):
         checktext = self.createSessionUI.labelCheckField.text()
         username = self.createSessionUI.lineEditUsername.text()
         password = self.createSessionUI.lineEditPassword.text()
+        key = Fernet.generate_key()
+        fernet = Fernet(key)
+        encPassword = fernet.encrypt(password.encode())
         fullname = self.createSessionUI.lineEditFullname.text()
         email = self.createSessionUI.lineEditEmail.text()
         organization = self.createSessionUI.lineEditOrganization.text()
         now = datetime.now()
         current_time = now.strftime("%H:%M:%S")
-        if checktext == '' and username != '' and password != '' and fullname != '' and email != '' and organization != '':
-            self.session = Session(username, password, fullname, email, organization, current_time)
+        if checktext == '' and username != '' and password != '' and fullname != '' and email != '' and\
+                organization != '':
+            self.session = Session(username, encPassword.decode('utf8'), fullname, email, organization, current_time,
+                                   key.decode('utf8'))
+            jsonStr = json.dumps(self.session, indent=4, cls=CustomEncoder)
+            with open("session2.json", "w") as outfile:
+                outfile.write(jsonStr)
             self.createSessionUI.close()
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Information)
@@ -328,7 +336,22 @@ class Window(QMainWindow):
         print("Close session")
 
     def actionLogin(self):
-        print("Login session")
+        with open('session.json', 'r') as f:
+            session = json.load(f)
+        if session['username'] != self.loginUI.lineEditUsername.text():
+            self.loginUI.labelCheckField.setText('The username did not match our records.')
+            return
+        if self.loginUI.lineEditPassword.text() == Fernet(session['key'].encode()).decrypt(
+                session['password'].encode()).decode('utf8'):
+            self.session = Session(session['username'], session['password'], session['fullname'], session['email'],
+                                   session['organization'], datetime.now().strftime("%H:%M:%S"), session['key'])
+            print("Login successfully")
+            print(self.session)
+            self.loginUI.labelCheckField.setText('')
+            self.loginUI.close()
+        else:
+            self.loginUI.labelCheckField.setText('The password is wrong.')
+            print("Login error")
 
     # Checking annotation mode
     def onAnnotationMode(self, checked):
@@ -1133,14 +1156,18 @@ class Dataset:
         self.tmpRaws = {}
 
 class Session:
-    def __init__(self, username, password, fullname, email, organization, last_login):
+    def __init__(self, username, password, fullname, email, organization, last_login, key):
         self.username = username
         self.password = password
         self.fullname = fullname
         self.email = email
         self.organization = organization
         self.last_login = last_login
+        self.key = key
         self.data = []
+class CustomEncoder(json.JSONEncoder):
+    def default(self, o):
+            return o.__dict__
 
 # application
 if __name__ == "__main__":
