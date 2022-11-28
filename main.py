@@ -9,6 +9,7 @@ import json
 import re
 from string import (punctuation, whitespace, digits, ascii_lowercase, ascii_uppercase)
 from cryptography.fernet import Fernet
+from collections import namedtuple
 import mne
 import pyautogui
 from PyQt6 import uic
@@ -44,6 +45,8 @@ class Window(QMainWindow):
         self.loadingDialog()
         # Saving
         # self.savingDialog()
+        # Loading configurations
+        self.getAppProperties()
 
     def initUI(self):
         self.MainUi = uic.loadUi("guide/MainApplication.ui")
@@ -190,6 +193,26 @@ class Window(QMainWindow):
         self.loginUI.pushButtonCancel.clicked.connect(lambda: self.loginUI.close())
         self.loginUI.show()
 
+    def getAppProperties(self):
+        print(Path.home())
+        self.configPath = Path(Path.home(), '.Annot')
+        if not self.configPath.exists():
+            os.makedirs(self.configPath)
+
+        self.dataseTmpPath = Path(Path.home(), '.Annot', 'Dataset')
+        if not self.dataseTmpPath.exists():
+            os.makedirs(self.dataseTmpPath)
+        self.sessionPath = Path(Path.home(), '.Annot', 'Session')
+        if not self.sessionPath.exists():
+            os.makedirs(self.sessionPath)
+        self.sessionsFile = Path(self.sessionPath, 'sessions.json')
+        if not self.sessionsFile.exists():
+            self.sessions = []
+        else:
+            with open(self.sessionsFile, 'r') as f:
+                sessionsJSON = json.load(f)
+                self.sessions = json.loads(sessionsJSON, object_hook=self.customSessionDecoder)
+
     def actionRergisterSession(self):
         print("Create session")
         self.loginUI.close()
@@ -227,10 +250,11 @@ class Window(QMainWindow):
         current_time = now.strftime("%H:%M:%S")
         if checktext == '' and username != '' and password != '' and fullname != '' and email != '' and\
                 organization != '':
-            self.session = Session(username, encPassword.decode('utf8'), fullname, email, organization, current_time,
+            newSession = Session(username, encPassword.decode('utf8'), fullname, email, organization, current_time,
                                    key.decode('utf8'))
-            jsonStr = json.dumps(self.session, indent=4, cls=CustomEncoder)
-            with open("session2.json", "w") as outfile:
+
+            jsonStr = json.dumps(self.newSession, indent=4, cls=CustomEncoder)
+            with open(self.sessionsFile, "w") as outfile:
                 outfile.write(jsonStr)
             self.createSessionUI.close()
             msg = QMessageBox()
@@ -336,22 +360,23 @@ class Window(QMainWindow):
         print("Close session")
 
     def actionLogin(self):
-        with open('session.json', 'r') as f:
-            session = json.load(f)
-        if session['username'] != self.loginUI.lineEditUsername.text():
+        self.loginSession = []
+        for i in len(self.sessions):
+            if self.sessions[i].username == self.loginUI.lineEditUsername.text():
+                tmpSession = self.sessions[i]
+        if not tmpSession:
             self.loginUI.labelCheckField.setText('The username did not match our records.')
             return
-        if self.loginUI.lineEditPassword.text() == Fernet(session['key'].encode()).decrypt(
-                session['password'].encode()).decode('utf8'):
-            self.session = Session(session['username'], session['password'], session['fullname'], session['email'],
-                                   session['organization'], datetime.now().strftime("%H:%M:%S"), session['key'])
+        if self.loginUI.lineEditPassword.text() == Fernet(
+                tmpSession.key.encode()).decrypt(tmpSession.password.encode()).decode('utf8'):
             print("Login successfully")
-            print(self.session)
             self.loginUI.labelCheckField.setText('')
             self.loginUI.close()
         else:
             self.loginUI.labelCheckField.setText('The password is wrong.')
             print("Login error")
+            return
+        self.loginSession = tmpSession
 
     # Checking annotation mode
     def onAnnotationMode(self, checked):
@@ -904,11 +929,7 @@ class Window(QMainWindow):
         saving.setModal(True)
         saving.open()
         raw_temp = self.raw.copy()
-        print(Path.home())
-        tmpPath = Path(Path.home(), 'tmp', 'Dataset')
-        if not tmpPath.exists():
-            os.makedirs(tmpPath)
-        subjectPath = tmpPath.joinpath(self.Dataset.bids_path.subject)
+        subjectPath = self.dataseTmpPath.joinpath(self.Dataset.bids_path.subject)
         if not subjectPath.exists():
             os.makedirs(subjectPath)
         tmpFile = subjectPath.joinpath(self.Dataset.bids_path.subject + '_rawdata_eeg.fif')
@@ -1165,6 +1186,8 @@ class Session:
         self.last_login = last_login
         self.key = key
         self.data = []
+def customSessionDecoder(sessionDict):
+    return namedtuple('X', sessionDict.keys())(*sessionDict.values())
 class CustomEncoder(json.JSONEncoder):
     def default(self, o):
             return o.__dict__
