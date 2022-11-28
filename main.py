@@ -206,12 +206,15 @@ class Window(QMainWindow):
         if not self.sessionPath.exists():
             os.makedirs(self.sessionPath)
         self.sessionsFile = Path(self.sessionPath, 'sessions.json')
-        if not self.sessionsFile.exists():
-            self.sessions = []
-        else:
-            print(self.sessionsFile)
+        self.sessions = []
+        if self.sessionsFile.exists():
             with open(self.sessionsFile, 'r', encoding='utf-8') as sessionsJSON:
-                self.sessions = json.loads(sessionsJSON.read(), object_hook=self.customSessionDecoder)
+                sessions = json.loads(sessionsJSON.read())
+            for session in sessions:
+                self.sessions.append(Session(session['username'], session['password'], session['fullname'],
+                                             session['email'], session['organization'], session['last_login'],
+                                             session['key']))
+
 
     def actionRergisterSession(self):
         print("Create session")
@@ -252,7 +255,9 @@ class Window(QMainWindow):
                 organization != '':
             newSession = Session(username, encPassword.decode('utf8'), fullname, email, organization, current_time,
                                    key.decode('utf8'))
-            jsonStr = json.dumps(newSession, indent=4, cls=CustomEncoder)
+            self.sessions.append(newSession)
+            jsonStr = json.dumps(self.sessions, indent=4, cls=CustomEncoder)
+            print(jsonStr)
             with open(self.sessionsFile, "w") as outfile:
                 outfile.write(jsonStr)
             self.createSessionUI.close()
@@ -290,6 +295,10 @@ class Window(QMainWindow):
         else:
             tWidget.setStyleSheet("border: 1px solid red; color: red")
             self.createSessionUI.labelCheckField.setText("Invalid username")
+        for session in self.sessions:
+            if session.username == tWidget.text():
+                tWidget.setStyleSheet("border: 1px solid red; color: red")
+                self.createSessionUI.labelCheckField.setText("The username is already taked")
 
     def checkPassword(self, tWidget, oStyle ):
         password = tWidget.text()
@@ -359,23 +368,30 @@ class Window(QMainWindow):
         print("Close session")
 
     def actionLogin(self):
+        if not self.loginUI.lineEditUsername.text() or not self.loginUI.lineEditPassword.text():
+            self.loginUI.labelCheckField.setText('Please type username and password.')
+            return
         self.loginSession = []
-        for i in len(self.sessions):
-            if self.sessions[i].username == self.loginUI.lineEditUsername.text():
-                tmpSession = self.sessions[i]
+        print("Sessions:")
+        print(self.sessions)
+        for tmpSession in self.sessions:
+            print("Session:")
+            print(tmpSession)
+            if tmpSession.username == self.loginUI.lineEditUsername.text():
+                if self.loginUI.lineEditPassword.text() == Fernet(
+                        tmpSession.key.encode()).decrypt(tmpSession.password.encode()).decode('utf8'):
+                    print("Login successfully")
+                    self.loginUI.labelCheckField.setText('')
+                    loginSession = tmpSession
+                else:
+                    self.loginUI.labelCheckField.setText('The password is wrong.')
+                    print("Login error")
+                    return
         if not tmpSession:
             self.loginUI.labelCheckField.setText('The username did not match our records.')
             return
-        if self.loginUI.lineEditPassword.text() == Fernet(
-                tmpSession.key.encode()).decrypt(tmpSession.password.encode()).decode('utf8'):
-            print("Login successfully")
-            self.loginUI.labelCheckField.setText('')
-            self.loginUI.close()
-        else:
-            self.loginUI.labelCheckField.setText('The password is wrong.')
-            print("Login error")
-            return
         self.loginSession = tmpSession
+        self.loginUI.close()
 
     # Checking annotation mode
     def onAnnotationMode(self, checked):
