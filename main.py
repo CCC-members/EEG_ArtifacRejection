@@ -16,7 +16,8 @@ from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QMovie, QAction, QFont
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QGroupBox, \
-    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QDialog, QWidgetItem, QLineEdit
+    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QDialog, QWidgetItem, QLineEdit,\
+    QSpacerItem, QToolBar
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from mne.viz import set_browser_backend
 import numpy as np
@@ -122,6 +123,9 @@ class Window(QMainWindow):
         # Test Load Dataset
         self.MainUi.actionLoad_Dataset.triggered.connect(lambda: self.loadDatasetMock())
 
+
+
+
     # Tools Box
     def onToolsBar(self):
         self.MainUi.button_raw = QToolButton(self)
@@ -173,6 +177,22 @@ class Window(QMainWindow):
         self.MainUi.button_ica.setStatusTip("Compute Independent Components Analysis")
         self.MainUi.button_ica.clicked.connect(self.plotICAAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_ica)
+        self.MainUi.toolBar.addSeparator()
+        # spacer widget for left
+        left_spacer = QWidget()
+        left_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        # spacer widget for right
+        # you can't add the same widget to both left and right. you need two different widgets.
+
+        # here goes the left one
+        self.MainUi.toolBar.addWidget(left_spacer)
+        self.MainUi.button_login = QToolButton(self)
+        self.MainUi.button_login.setIcon(QIcon('images/icons/login.png'))
+
+        self.MainUi.button_login.setStatusTip("Login")
+        self.MainUi.button_login.clicked.connect(self.plotICAAction)
+        self.MainUi.toolBar.addWidget(self.MainUi.button_login)
+        self.MainUi.toolBar.addSeparator()
 
     def checkToolsBarOptions(self, show):
         if self.annotationMode:
