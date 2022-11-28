@@ -209,9 +209,9 @@ class Window(QMainWindow):
         if not self.sessionsFile.exists():
             self.sessions = []
         else:
-            with open(self.sessionsFile, 'r') as f:
-                sessionsJSON = json.load(f)
-                self.sessions = json.loads(sessionsJSON, object_hook=self.customSessionDecoder)
+            print(self.sessionsFile)
+            with open(self.sessionsFile, 'r', encoding='utf-8') as sessionsJSON:
+                self.sessions = json.loads(sessionsJSON.read(), object_hook=self.customSessionDecoder)
 
     def actionRergisterSession(self):
         print("Create session")
@@ -252,8 +252,7 @@ class Window(QMainWindow):
                 organization != '':
             newSession = Session(username, encPassword.decode('utf8'), fullname, email, organization, current_time,
                                    key.decode('utf8'))
-
-            jsonStr = json.dumps(self.newSession, indent=4, cls=CustomEncoder)
+            jsonStr = json.dumps(newSession, indent=4, cls=CustomEncoder)
             with open(self.sessionsFile, "w") as outfile:
                 outfile.write(jsonStr)
             self.createSessionUI.close()
@@ -1163,9 +1162,10 @@ class Window(QMainWindow):
 
         self.currentPart = 0
         self.panelWizard()
-
-
         print('check')
+
+    def customSessionDecoder(self, sessionDict):
+        return namedtuple('X', sessionDict.keys())(*sessionDict.values())
 
 class Dataset:
     def __init__(self, path, name, dstype, doi, authors):
@@ -1186,8 +1186,7 @@ class Session:
         self.last_login = last_login
         self.key = key
         self.data = []
-def customSessionDecoder(sessionDict):
-    return namedtuple('X', sessionDict.keys())(*sessionDict.values())
+
 class CustomEncoder(json.JSONEncoder):
     def default(self, o):
             return o.__dict__
