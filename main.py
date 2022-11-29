@@ -44,6 +44,8 @@ class Window(QMainWindow):
         self.onToolsBar()
         # Loading
         self.loadingDialog()
+        # Annotation mode
+        self.onAnnotationMode(self.MainUi.actionAnnotation_mode.isChecked())
         # Saving
         # self.savingDialog()
         # Loading configurations
@@ -112,19 +114,8 @@ class Window(QMainWindow):
         self.MainUi.actionAnnotation_mode.triggered.connect(
             lambda: self.onAnnotationMode(self.MainUi.actionAnnotation_mode.isChecked()))
 
-        if self.MainUi.actionAnnotation_mode.isChecked:
-            self.annotationMode = True
-            self.MainUi.actionDsNew.setEnabled(False)
-            self.MainUi.actionDsLoad.setEnabled(False)
-            self.MainUi.actionPtNew.setEnabled(False)
-            self.MainUi.actionPtLoad.setEnabled(False)
-            self.MainUi.toolBar.setEnabled(False)
-
         # Test Load Dataset
         self.MainUi.actionLoad_Dataset.triggered.connect(lambda: self.loadDatasetMock())
-
-
-
 
     # Tools Box
     def onToolsBar(self):
@@ -177,22 +168,34 @@ class Window(QMainWindow):
         self.MainUi.button_ica.setStatusTip("Compute Independent Components Analysis")
         self.MainUi.button_ica.clicked.connect(self.plotICAAction)
         self.MainUi.toolBar.addWidget(self.MainUi.button_ica)
+
+        # Loging Tool Action
         self.MainUi.toolBar.addSeparator()
-        # spacer widget for left
         left_spacer = QWidget()
         left_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        # spacer widget for right
-        # you can't add the same widget to both left and right. you need two different widgets.
-
-        # here goes the left one
         self.MainUi.toolBar.addWidget(left_spacer)
         self.MainUi.button_login = QToolButton(self)
         self.MainUi.button_login.setIcon(QIcon('images/icons/login.png'))
-
         self.MainUi.button_login.setStatusTip("Login")
-        self.MainUi.button_login.clicked.connect(self.plotICAAction)
+        self.MainUi.button_login.clicked.connect(lambda: self.openSession())
         self.MainUi.toolBar.addWidget(self.MainUi.button_login)
-        self.MainUi.toolBar.addSeparator()
+        self.MainUi.button_loginT = QToolButton(self)
+        self.MainUi.button_loginT.setText('Login')
+        self.MainUi.button_loginT.setStatusTip("Login")
+        self.MainUi.button_loginT.clicked.connect(lambda: self.openSession())
+        self.MainUi.toolBar.addWidget(self.MainUi.button_loginT)
+
+        # Logout Tool Action
+        self.MainUi.button_logout = QToolButton(self)
+        self.MainUi.button_logout.setIcon(QIcon('images/icons/logout.png'))
+        self.MainUi.button_logout.setStatusTip("Logout")
+        self.MainUi.button_logout.setVisible(False)
+        self.MainUi.button_logout.clicked.connect(lambda: self.closeSession())
+        self.MainUi.button_logoutT = QToolButton(self)
+        self.MainUi.button_logoutT.setText('')
+        self.MainUi.button_logoutT.setVisible(False)
+        self.MainUi.button_logoutT.setStatusTip("Logout")
+        self.MainUi.button_logoutT.clicked.connect(lambda: self.closeSession())
 
     def checkToolsBarOptions(self, show):
         if self.annotationMode:
@@ -204,21 +207,11 @@ class Window(QMainWindow):
         self.MainUi.button_events.setEnabled(show)
         self.MainUi.button_ica.setEnabled(show)
 
-    def openSession(self):
-        print("Open session")
-        self.loginUI = uic.loadUi("guide/Login.ui")
-        self.loginUI.labelCreateSession.setText("<a href='self.createSession'>Create a new session</a>")
-        self.loginUI.labelCreateSession.linkActivated.connect(self.actionRergisterSession)
-        self.loginUI.pushButtonLogin.clicked.connect(lambda: self.actionLogin())
-        self.loginUI.pushButtonCancel.clicked.connect(lambda: self.loginUI.close())
-        self.loginUI.show()
-
     def getAppProperties(self):
         print(Path.home())
         self.configPath = Path(Path.home(), '.Annot')
         if not self.configPath.exists():
             os.makedirs(self.configPath)
-
         self.dataseTmpPath = Path(Path.home(), '.Annot', 'Dataset')
         if not self.dataseTmpPath.exists():
             os.makedirs(self.dataseTmpPath)
@@ -234,7 +227,6 @@ class Window(QMainWindow):
                 self.sessions.append(Session(session['username'], session['password'], session['fullname'],
                                              session['email'], session['organization'], session['last_login'],
                                              session['key']))
-
 
     def actionRergisterSession(self):
         print("Create session")
@@ -255,6 +247,12 @@ class Window(QMainWindow):
         eStyle = self.createSessionUI.lineEditEmail.styleSheet()
         self.createSessionUI.lineEditEmail.textChanged.connect(
             lambda: self.checkEmail(self.createSessionUI.lineEditEmail, eStyle))
+        self.createSessionUI.lineEditFullname.returnPressed.connect(self.createSessionUI.lineEditUsername.setFocus)
+        self.createSessionUI.lineEditUsername.returnPressed.connect(self.createSessionUI.lineEditPassword.setFocus)
+        self.createSessionUI.lineEditPassword.returnPressed.connect(self.createSessionUI.lineEditRepPassword.setFocus)
+        self.createSessionUI.lineEditRepPassword.returnPressed.connect(self.createSessionUI.lineEditEmail.setFocus)
+        self.createSessionUI.lineEditEmail.returnPressed.connect(self.createSessionUI.lineEditOrganization.setFocus)
+        self.createSessionUI.lineEditOrganization.returnPressed.connect(lambda: self.actionCreateSession())
         self.createSessionUI.pushButtonCancel.clicked.connect(lambda: self.createSessionUI.close())
         self.createSessionUI.pushButtonCreate.clicked.connect(lambda: self.actionCreateSession())
         self.createSessionUI.show()
@@ -385,7 +383,31 @@ class Window(QMainWindow):
             self.createSessionUI.labelCheckField.setText("Invalid email address")
 
     def closeSession(self):
+        self.MainUi.button_logout.setParent(None)
+        self.MainUi.button_logoutT.setParent(None)
+        # Loging Tool Action
+        self.MainUi.button_login = QToolButton(self)
+        self.MainUi.button_login.setIcon(QIcon('images/icons/login.png'))
+        self.MainUi.button_login.setStatusTip("Login")
+        self.MainUi.button_login.clicked.connect(lambda: self.openSession())
+        self.MainUi.toolBar.addWidget(self.MainUi.button_login)
+        self.MainUi.button_loginT = QToolButton(self)
+        self.MainUi.button_loginT.setText('Login')
+        self.MainUi.button_loginT.setStatusTip("Login")
+        self.MainUi.button_loginT.clicked.connect(lambda: self.openSession())
+        self.MainUi.toolBar.addWidget(self.MainUi.button_loginT)
         print("Close session")
+
+    def openSession(self):
+        print("Open session")
+        self.loginUI = uic.loadUi("guide/Login.ui")
+        self.loginUI.labelCreateSession.setText("<a href='self.createSession'>Create a new session</a>")
+        self.loginUI.labelCreateSession.linkActivated.connect(self.actionRergisterSession)
+        self.loginUI.pushButtonLogin.clicked.connect(lambda: self.actionLogin())
+        self.loginUI.lineEditUsername.returnPressed.connect(lambda: self.actionLogin())
+        self.loginUI.lineEditPassword.returnPressed.connect(lambda: self.actionLogin())
+        self.loginUI.pushButtonCancel.clicked.connect(lambda: self.loginUI.close())
+        self.loginUI.show()
 
     def actionLogin(self):
         if not self.loginUI.lineEditUsername.text() or not self.loginUI.lineEditPassword.text():
@@ -403,6 +425,20 @@ class Window(QMainWindow):
                     print("Login successfully")
                     self.loginUI.labelCheckField.setText('')
                     loginSession = tmpSession
+                    self.MainUi.button_login.setParent(None)
+                    self.MainUi.button_loginT.setParent(None)
+                    # Logout Tool Action
+                    self.MainUi.button_logout = QToolButton(self)
+                    self.MainUi.button_logout.setIcon(QIcon('images/icons/logout.png'))
+                    self.MainUi.button_logout.setStatusTip("Logout")
+                    self.MainUi.button_logout.clicked.connect(lambda: self.closeSession())
+                    self.MainUi.toolBar.addWidget(self.MainUi.button_logout)
+                    self.MainUi.button_logoutT = QToolButton(self)
+                    self.MainUi.button_logoutT.setText('')
+                    self.MainUi.button_logoutT.setStatusTip("Logout")
+                    self.MainUi.button_logoutT.clicked.connect(lambda: self.closeSession())
+                    self.MainUi.button_logoutT.setText(loginSession.fullname)
+                    self.MainUi.toolBar.addWidget(self.MainUi.button_logoutT)
                 else:
                     self.loginUI.labelCheckField.setText('The password is wrong.')
                     print("Login error")
@@ -417,18 +453,30 @@ class Window(QMainWindow):
     def onAnnotationMode(self, checked):
         if checked:
             self.annotationMode = True
+            self.MainUi.button_raw.setEnabled(False)
+            self.MainUi.button_psd.setEnabled(False)
+            self.MainUi.button_topomap.setEnabled(False)
+            self.MainUi.button_sensors.setEnabled(False)
+            self.MainUi.button_covM.setEnabled(False)
+            self.MainUi.button_events.setEnabled(False)
+            self.MainUi.button_ica.setEnabled(False)
             self.MainUi.actionDsNew.setEnabled(False)
             self.MainUi.actionDsLoad.setEnabled(False)
             self.MainUi.actionPtNew.setEnabled(False)
             self.MainUi.actionPtLoad.setEnabled(False)
-            self.MainUi.toolBar.setEnabled(False)
         else:
             self.annotationMode = False
+            self.MainUi.button_raw.setEnabled(True)
+            self.MainUi.button_psd.setEnabled(True)
+            self.MainUi.button_topomap.setEnabled(True)
+            self.MainUi.button_sensors.setEnabled(True)
+            self.MainUi.button_covM.setEnabled(True)
+            self.MainUi.button_events.setEnabled(True)
+            self.MainUi.button_ica.setEnabled(True)
             self.MainUi.actionDsNew.setEnabled(True)
             self.MainUi.actionDsLoad.setEnabled(True)
             self.MainUi.actionPtNew.setEnabled(True)
             self.MainUi.actionPtLoad.setEnabled(True)
-            self.MainUi.toolBar.setEnabled(True)
 
     def loadingDialog(self):
         self.loading = uic.loadUi("guide/Loading.ui")
