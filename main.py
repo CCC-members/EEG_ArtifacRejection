@@ -51,6 +51,8 @@ class Window(QMainWindow):
         # Loading configurations
         self.getAppProperties()
 
+        self.mne = mne
+
     def initUI(self):
         self.MainUi = uic.loadUi("guide/MainApplication.ui")
         self.MainUi.show()
@@ -116,6 +118,7 @@ class Window(QMainWindow):
 
         # Test Load Dataset
         self.MainUi.actionLoad_Dataset.triggered.connect(lambda: self.loadDatasetMock())
+        self.MainUi.actionAnnotation.triggered.connect(lambda: self.testAnnotation())
 
     # Tools Box
     def onToolsBar(self):
@@ -872,15 +875,20 @@ class Window(QMainWindow):
                 print('Loading raw data')
                 self.MainUi.button_raw.setEnabled(False)
                 self.importRawBids(self.Dataset.bids_path)
-                mneQtBrowser = self.exploreRawData()
+                self.mneQtBrowser = self.exploreRawData()
             if self.annotationMode:
-                layout = mneQtBrowser.mne.fig_annotation.widget().layout()
+                layout = self.mneQtBrowser.mne.fig_annotation.widget().layout()
                 for i in range(layout.count()):
                     if i > 0 and i < 4:
                         item = layout.itemAt(i)
                         item.widget().setHidden(True)
                 layout.insertWidget(0, self.MainUi.labelTitle)
-            self.MainUi.horizontalLayoutMain.addWidget(mneQtBrowser)
+                self.MainUi.checkBoxChannles = QCheckBox("All channels")
+                self.MainUi.checkBoxChannles.setCheckState(Qt.CheckState.Checked)
+                self.MainUi.checkBoxChannles.clicked.connect(
+                    lambda: self.selectChannels(self.MainUi.checkBoxChannles.isChecked()))
+                layout.addWidget(self.MainUi.checkBoxChannles)
+            self.MainUi.horizontalLayoutMain.addWidget(self.mneQtBrowser)
             self.checkToolsBarOptions(True)
         except FileNotFoundError as fe:
             msg = QMessageBox()
@@ -1053,6 +1061,16 @@ class Window(QMainWindow):
         self.currentPart = len(self.DataList) - 1
         self.panelWizard()
         print('Wizard Next All')
+
+    def selectChannels(self, checked):
+        self.ChannelsUI = uic.loadUi("guide/DialogChannels.ui")
+        
+        for channelName in self.raw.ch_names:
+            checkBox = QCheckBox(channelName)
+            checkBox.setChecked(True)
+            self.ChannelsUI.gridLayout.addWidget(checkBox)
+        self.ChannelsUI.show()
+        print('Show channels')
 
     # Save annotations
     def saveAnnotations(self):
@@ -1246,7 +1264,14 @@ class Window(QMainWindow):
 
         self.currentPart = 0
         self.panelWizard()
+
         print('check')
+
+    def testAnnotation(self):
+        print("Annotation:")
+        print("Description: " + self.mneQtBrowser.mne.selected_region.description)
+        print("Onset: " + str(self.mneQtBrowser.mne.selected_region.getRegion()[0]))
+        print("Offset: " + str(self.mneQtBrowser.mne.selected_region.getRegion()[1]))
 
     def customSessionDecoder(self, sessionDict):
         return namedtuple('X', sessionDict.keys())(*sessionDict.values())

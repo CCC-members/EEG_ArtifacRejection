@@ -254,6 +254,7 @@
       <string>Test</string>
      </property>
      <addaction name="actionLoad_Dataset"/>
+     <addaction name="actionAnnotation"/>
     </widget>
     <widget class="QMenu" name="menuSession">
      <property name="title">
@@ -465,6 +466,11 @@
   <action name="actionSessionClose">
    <property name="text">
     <string>Close</string>
+   </property>
+  </action>
+  <action name="actionAnnotation">
+   <property name="text">
+    <string>Annotation</string>
    </property>
   </action>
  </widget>
