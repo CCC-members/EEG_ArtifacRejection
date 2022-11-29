@@ -909,7 +909,9 @@ class Window(QMainWindow):
         self.rawTmp = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
         mneQtBrowser = self.rawTmp.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red',
                                         show_options=False)
+        mneQtBrowser.mne.toolbar.setVisible(False)
         mneQtBrowser.fake_keypress('a')
+
         return mneQtBrowser
 
     def importRawBids(self, bids_path):
@@ -961,7 +963,9 @@ class Window(QMainWindow):
         set_browser_backend("qt")
         mneQtBrowser = self.raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red',
                                      show_options=True, title=("Participant: %s" % self.DataList[self.currentPart]))
+        mneQtBrowser.mne.toolbar.setVisible(False)
         mneQtBrowser.fake_keypress('a')
+
         return mneQtBrowser
 
     def showRawDataAction(self, checked):
@@ -1064,13 +1068,16 @@ class Window(QMainWindow):
 
     def selectChannels(self, checked):
         self.ChannelsUI = uic.loadUi("guide/DialogChannels.ui")
-        
-        for channelName in self.raw.ch_names:
-            checkBox = QCheckBox(channelName)
-            checkBox.setChecked(True)
-            self.ChannelsUI.gridLayout.addWidget(checkBox)
+        fig = self.raw.plot_sensors(show_names=True, sphere=0, show=False)
+        fig.canvas.toolbar_visible = False
+        fig.canvas.header_visible = False
+        fig.canvas.footer_visible = False
+        self.ChannelsUI.verticalLayout.addWidget(FigureCanvasQTAgg(fig))
+        # for channelName in self.raw.ch_names:
+        #     checkBox = QCheckBox(channelName)
+        #     checkBox.setChecked(True)
+        #     self.ChannelsUI.verticalLayout.addWidget(checkBox)
         self.ChannelsUI.show()
-        print('Show channels')
 
     # Save annotations
     def saveAnnotations(self):
@@ -1265,7 +1272,6 @@ class Window(QMainWindow):
         self.currentPart = 0
         self.panelWizard()
 
-        print('check')
 
     def testAnnotation(self):
         print("Annotation:")
