@@ -1068,11 +1068,43 @@ class Window(QMainWindow):
 
     def selectChannels(self, checked):
         self.ChannelsUI = uic.loadUi("guide/DialogChannels.ui")
-        fig = self.raw.plot_sensors(show_names=True, sphere=0, show=False)
-        fig.canvas.toolbar_visible = False
-        fig.canvas.header_visible = False
-        fig.canvas.footer_visible = False
-        self.ChannelsUI.verticalLayout.addWidget(FigureCanvasQTAgg(fig))
+        # fig = self.raw.plot_sensors(show_names=True, sphere=0, show=False, ch_type='eeg')
+        geometry = self.ChannelsUI.groupBoxChannels.geometry()
+        width = geometry.width()
+        height = geometry.height()
+        radius = 0.5
+        print(" w: " + str(geometry.width()) + " h: " + str(geometry.height()))
+        layout_from_raw = mne.channels.make_eeg_layout(self.raw.info)
+        pick_kwargs = dict(meg=False, eeg=True, ref_meg=False, exclude='bads')
+        picks = mne.io.pick.pick_types(self.raw.info, **pick_kwargs)
+        loc2d = mne.channels.layout._find_topomap_coords(self.raw.info, picks)
+        scale = np.maximum(-np.min(loc2d, axis=0), np.max(loc2d, axis=0)).max() * 2
+        loc2d /= scale
+        loc2d *= 2 * radius
+        scaling = min(1 / (1. + width), 1 / (1. + height))
+        loc2d *= scaling
+        width *= scaling
+        height *= scaling
+        # Shift to center
+        loc2d += 0.5
+        n_channels = loc2d.shape[0]
+        pos = np.c_[loc2d[:, 0] - 0.5 * width,
+                    loc2d[:, 1] - 0.5 * height,
+                    width * np.ones(n_channels),
+                    height * np.ones(n_channels)]
+        print(pos)
+        # for i in picks:
+        #     checkBox = QCheckBox(self.raw.ch_names[i])
+        #     checkBox.setGeometry(loc2d[i][0] + geometry.width()/2, loc2d[i][1] + geometry.height()/2, 20, 50)
+        #     checkBox.setParent(self.ChannelsUI.groupBoxChannels)
+
+        # print(loc2d)
+        # same result as mne.channels.find_layout(raw.info, ch_type='eeg')
+        # fig = layout_from_raw.plot(show=False)
+        # fig.canvas.toolbar_visible = False
+        # fig.canvas.header_visible = False
+        # fig.canvas.footer_visible = False
+        # self.ChannelsUI.verticalLayout.addWidget(FigureCanvasQTAgg(fig))
         # for channelName in self.raw.ch_names:
         #     checkBox = QCheckBox(channelName)
         #     checkBox.setChecked(True)
