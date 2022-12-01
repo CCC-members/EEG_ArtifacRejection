@@ -1,5 +1,4 @@
 import csv
-import json
 import os
 import sys
 from datetime import timedelta
@@ -1078,21 +1077,23 @@ class Window(QMainWindow):
         pick_kwargs = dict(meg=False, eeg=True, ref_meg=False, exclude='bads')
         picks = mne.io.pick.pick_types(self.raw.info, **pick_kwargs)
         loc2d = mne.channels.layout._find_topomap_coords(self.raw.info, picks)
-        scale = np.maximum(-np.min(loc2d, axis=0), np.max(loc2d, axis=0)).max() * 2
-        loc2d /= scale
-        loc2d *= 2 * radius
-        scaling = min(1 / (1. + width), 1 / (1. + height))
-        loc2d *= scaling
-        width *= scaling
-        height *= scaling
-        # Shift to center
-        loc2d += 0.5
-        n_channels = loc2d.shape[0]
-        pos = np.c_[loc2d[:, 0] - 0.5 * width,
-                    loc2d[:, 1] - 0.5 * height,
-                    width * np.ones(n_channels),
-                    height * np.ones(n_channels)]
-        print(pos)
+
+        with open('template/eeg_10-05_labels.json', 'r', encoding='utf-8') as layoutJSON:
+            layout = json.loads(layoutJSON.read())
+            labels = layout['labels']
+        for channelName in self.raw.ch_names:
+            row,col = self.find(channelName, labels)
+            checkBox = QCheckBox(channelName)
+            checkBox.setChecked(True)
+            self.ChannelsUI.gridLayout.addWidget(checkBox, row, col)
+        # for i in range(len(labels)):
+        #     for j in range(len(labels[i])):
+        #         if labels[i][j] != "":
+        #             checkBox = QCheckBox(labels[i][j])
+        #             checkBox.setChecked(True)
+        #             self.ChannelsUI.gridLayout.addWidget(checkBox, i, j)
+        self.ChannelsUI.gridLayout.setVerticalSpacing(15)
+        self.ChannelsUI.gridLayout.setHorizontalSpacing(0)
         # for i in picks:
         #     checkBox = QCheckBox(self.raw.ch_names[i])
         #     checkBox.setGeometry(loc2d[i][0] + geometry.width()/2, loc2d[i][1] + geometry.height()/2, 20, 50)
@@ -1110,6 +1111,12 @@ class Window(QMainWindow):
         #     checkBox.setChecked(True)
         #     self.ChannelsUI.verticalLayout.addWidget(checkBox)
         self.ChannelsUI.show()
+
+    def find(self, element, matrix):
+        for i, matrix_i in enumerate(matrix):
+            for j, value in enumerate(matrix_i):
+                if value == element:
+                    return i, j
 
     # Save annotations
     def saveAnnotations(self):
