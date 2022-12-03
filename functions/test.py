@@ -33,12 +33,14 @@ from PyQt6.QtWidgets import QApplication, QWidget, QLabel
 from PyQt6.QtGui import QFont, QFontDatabase
 import sys
 
+import json
+from dict2obj import Dict2Obj
 
-with open('template/eeg_10-05_labels.json', 'r', encoding='utf-8') as layoutJSON:
-    layout = json.loads(layoutJSON.read())
-for i in range(len(layout)):
-        for j in range(len(layout[i])):
-            if layout[i][j] != "":
+param = open('config/param.json')
+param = json.load(param)
+param = Dict2Obj(param)
+
+
 
 
 

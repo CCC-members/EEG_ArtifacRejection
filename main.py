@@ -16,7 +16,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QMovie, QAction, QFont
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QGroupBox, \
     QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QDialog, QWidgetItem, QLineEdit,\
-    QSpacerItem, QToolBar
+    QSpacerItem, QToolBar, QPushButton
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from mne.viz import set_browser_backend
 import numpy as np
@@ -850,6 +850,7 @@ class Window(QMainWindow):
         else:
             self.dsPartUi.close()
             self.currentPart = 0
+            self.annotations = {}
             self.panelWizard()
 
     def panelWizard(self):
@@ -882,11 +883,15 @@ class Window(QMainWindow):
                         item = layout.itemAt(i)
                         item.widget().setHidden(True)
                 layout.insertWidget(0, self.MainUi.labelTitle)
-                self.MainUi.checkBoxChannles = QCheckBox("All channels")
-                self.MainUi.checkBoxChannles.setCheckState(Qt.CheckState.Checked)
-                self.MainUi.checkBoxChannles.clicked.connect(
-                    lambda: self.selectChannels(self.MainUi.checkBoxChannles.isChecked()))
-                layout.addWidget(self.MainUi.checkBoxChannles)
+                self.MainUi.pushButtonChannels = QPushButton("Select channels")
+                self.MainUi.pushButtonChannels.clicked.connect(
+                    lambda: self.selectChannels())
+                layout.insertWidget(layout.count()-1, self.MainUi.pushButtonChannels)
+                self.MainUi.pushButtonChannels = QPushButton("Delete")
+                self.MainUi.pushButtonChannels.clicked.connect(
+                    lambda: self.deleteAnnotation())
+                layout.insertWidget(layout.count() - 1, self.MainUi.pushButtonChannels)
+
             self.MainUi.horizontalLayoutMain.addWidget(self.mneQtBrowser)
             self.checkToolsBarOptions(True)
         except FileNotFoundError as fe:
@@ -956,6 +961,8 @@ class Window(QMainWindow):
                     new_annotations.append(annotation['onset'], annotation['duration'], annotation['description'])
             # Setting new annotations
             self.raw.set_annotations(new_annotations)
+            self.channelsByAnnot = {}
+
 
     def exploreRawData(self):
         print("Plotting EEG data")
@@ -964,7 +971,6 @@ class Window(QMainWindow):
                                      show_options=True, title=("Participant: %s" % self.DataList[self.currentPart]))
         mneQtBrowser.mne.toolbar.setVisible(False)
         mneQtBrowser.fake_keypress('a')
-
         return mneQtBrowser
 
     def showRawDataAction(self, checked):
@@ -1065,58 +1071,169 @@ class Window(QMainWindow):
         self.panelWizard()
         print('Wizard Next All')
 
-    def selectChannels(self, checked):
-        self.ChannelsUI = uic.loadUi("guide/DialogChannels.ui")
-        # fig = self.raw.plot_sensors(show_names=True, sphere=0, show=False, ch_type='eeg')
-        geometry = self.ChannelsUI.groupBoxChannels.geometry()
-        width = geometry.width()
-        height = geometry.height()
-        radius = 0.5
-        print(" w: " + str(geometry.width()) + " h: " + str(geometry.height()))
-        layout_from_raw = mne.channels.make_eeg_layout(self.raw.info)
-        pick_kwargs = dict(meg=False, eeg=True, ref_meg=False, exclude='bads')
-        picks = mne.io.pick.pick_types(self.raw.info, **pick_kwargs)
-        loc2d = mne.channels.layout._find_topomap_coords(self.raw.info, picks)
+    def deleteAnnotation(self):
+        if self.mneQtBrowser.mne.selected_region is None:
+            msg = QMessageBox()
+            msg.setWindowTitle("Delete annotation")
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("Notification")
+            msg.setInformativeText("You should select an annotation first.")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+            return
+        else:
+            selected_region = self.mneQtBrowser.mne.selected_region
+            msg = QMessageBox()
+            msg.setWindowTitle("Delete annotation")
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("Notification")
+            msg.setInformativeText("Are you sure do you want to delete the annotation: <br>" +
+                                   "Description: " + selected_region.description + "<br>" +
+                                   "Onset:" + str(selected_region.getRegion()[0]) + "<br>" +
+                                   "Offset:" + str(selected_region.getRegion()[1]) + "<br>")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+            ans = msg.exec()
+            if ans == QMessageBox.Ok:
+                idx = self.mneQtBrowser._get_onset_idx(selected_region.getRegion()[0])
+                self.mneQtBrowser._remove_region(selected_region, True)
 
-        with open('template/eeg_10-05_labels.json', 'r', encoding='utf-8') as layoutJSON:
-            layout = json.loads(layoutJSON.read())
-            labels = layout['labels']
-        for channelName in self.raw.ch_names:
-            row,col = self.find(channelName, labels)
-            checkBox = QCheckBox(channelName)
-            checkBox.setChecked(True)
-            self.ChannelsUI.gridLayout.addWidget(checkBox, row, col)
-        # for i in range(len(labels)):
-        #     for j in range(len(labels[i])):
-        #         if labels[i][j] != "":
-        #             checkBox = QCheckBox(labels[i][j])
-        #             checkBox.setChecked(True)
-        #             self.ChannelsUI.gridLayout.addWidget(checkBox, i, j)
-        self.ChannelsUI.gridLayout.setVerticalSpacing(15)
-        self.ChannelsUI.gridLayout.setHorizontalSpacing(0)
-        # for i in picks:
-        #     checkBox = QCheckBox(self.raw.ch_names[i])
-        #     checkBox.setGeometry(loc2d[i][0] + geometry.width()/2, loc2d[i][1] + geometry.height()/2, 20, 50)
-        #     checkBox.setParent(self.ChannelsUI.groupBoxChannels)
 
-        # print(loc2d)
-        # same result as mne.channels.find_layout(raw.info, ch_type='eeg')
-        # fig = layout_from_raw.plot(show=False)
-        # fig.canvas.toolbar_visible = False
-        # fig.canvas.header_visible = False
-        # fig.canvas.footer_visible = False
-        # self.ChannelsUI.verticalLayout.addWidget(FigureCanvasQTAgg(fig))
-        # for channelName in self.raw.ch_names:
-        #     checkBox = QCheckBox(channelName)
-        #     checkBox.setChecked(True)
-        #     self.ChannelsUI.verticalLayout.addWidget(checkBox)
-        self.ChannelsUI.show()
+    def selectChannels(self):
+        if self.mneQtBrowser.mne.selected_region is None:
+            msg = QMessageBox()
+            msg.setWindowTitle("Channels selection")
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("Notification")
+            msg.setInformativeText("You should select an annotation first.")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+            return
+        else:
+            self.ChannelsUI = uic.loadUi("guide/DialogChannels.ui")
+            # fig = self.raw.plot_sensors(show_names=True, sphere=0, show=False, ch_type='eeg')
+            # layout_from_raw = mne.channels.make_eeg_layout(self.raw.info)
+            # pick_kwargs = dict(meg=False, eeg=True, ref_meg=False, exclude='bads')
+            # picks = mne.io.pick.pick_types(self.raw.info, **pick_kwargs)
+            # loc2d = mne.channels.layout._find_topomap_coords(self.raw.info, picks)
 
-    def find(self, element, matrix):
+            with open('template/eeg_10-05_labels.json', 'r', encoding='utf-8') as layoutJSON:
+                layout = json.loads(layoutJSON.read())
+                labels = layout['labels']
+            for channelName in self.raw.ch_names:
+                row, col = self.findIndex(channelName, labels)
+                checkBox = QCheckBox(channelName, parent=self.ChannelsUI.groupBoxChannels)
+                idx = self.mneQtBrowser._get_onset_idx(self.mneQtBrowser.mne.selected_region.getRegion()[0])
+                if idx in self.channelsByAnnot.keys():
+                    if 'All' in self.channelsByAnnot[idx]:
+                        self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Unchecked)
+                    else:
+                        self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Unchecked)
+                    if channelName in self.channelsByAnnot[idx] or 'All' in self.channelsByAnnot[idx]:
+                        checkBox.setChecked(True)
+                        checkBox.setStyleSheet("color: red;")
+                    else:
+                        checkBox.setChecked(False)
+                        checkBox.setStyleSheet("color: blue;")
+                else:
+                    checkBox.setChecked(True)
+                    checkBox.setStyleSheet("color: red;")
+                checkBox.clicked.connect(
+                    lambda: self.onChangeColor())
+                self.ChannelsUI.gridLayout.addWidget(checkBox, row, col)
+            # for i in range(len(labels)):
+            #     for j in range(len(labels[i])):
+            #         if labels[i][j] != "":
+            #             checkBox = QCheckBox(labels[i][j])
+            #             checkBox.setChecked(True)
+            #             self.ChannelsUI.gridLayout.addWidget(checkBox, i, j)
+            self.ChannelsUI.gridLayout.setVerticalSpacing(15)
+            self.ChannelsUI.gridLayout.setHorizontalSpacing(0)
+            self.ChannelsUI.checkBoxAll.clicked.connect(lambda: self.onSelectAllChannels(self.ChannelsUI.checkBoxAll.isChecked()))
+            btnApply = self.ChannelsUI.buttonBox.button(QDialogButtonBox.StandardButton.Apply)
+            btnApply.clicked.connect(lambda: self.applyChannelAnnotation())
+            btnCancel = self.ChannelsUI.buttonBox.button(QDialogButtonBox.StandardButton.Cancel)
+            btnCancel.clicked.connect(lambda: self.cancelChannelAnnotation())
+
+            # same result as mne.channels.find_layout(raw.info, ch_type='eeg')
+            # fig = layout_from_raw.plot(show=False)
+            # fig.canvas.toolbar_visible = False
+            # fig.canvas.header_visible = False
+            # fig.canvas.footer_visible = False
+            # self.ChannelsUI.verticalLayout.addWidget(FigureCanvasQTAgg(fig))
+            # for channelName in self.raw.ch_names:
+            #     checkBox = QCheckBox(channelName)
+            #     checkBox.setChecked(True)
+            #     self.ChannelsUI.verticalLayout.addWidget(checkBox)
+            self.ChannelsUI.show()
+
+    def onSelectAllChannels(self, checkedAll):
+        for i in range(self.ChannelsUI.gridLayout.count()):
+            item = self.ChannelsUI.gridLayout.itemAt(i)
+            if type(item.widget()) == QCheckBox:
+                if checkedAll:
+                    item.widget().setCheckState(Qt.CheckState.Checked)
+                    item.widget().setStyleSheet("color: red;")
+                else:
+                    item.widget().setCheckState(Qt.CheckState.Unchecked)
+                    item.widget().setStyleSheet("color: blue;")
+
+    def onChangeColor(self):
+        checkedAll = True
+        checkBox = self.sender()
+        if checkBox.isChecked:
+            checkBox.setStyleSheet("color: red;")
+            self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Unchecked)
+        for i in range(self.ChannelsUI.gridLayout.count()):
+            item = self.ChannelsUI.gridLayout.itemAt(i)
+            if type(item.widget()) == QCheckBox:
+                if not item.widget().isChecked():
+                    item.widget().setStyleSheet("color: blue;")
+                    checkedAll = False
+        if checkedAll:
+            self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Checked)
+        else:
+            self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Unchecked)
+
+
+    def findIndex(self, element, matrix):
         for i, matrix_i in enumerate(matrix):
             for j, value in enumerate(matrix_i):
-                if value == element:
+                if value.lower() == element.lower():
                     return i, j
+
+    def applyChannelAnnotation(self):
+
+        annotChannels = []
+        if self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Checked):
+            annotChannels.append('All')
+        else:
+            for i in range(self.ChannelsUI.gridLayout.count()):
+                item = self.ChannelsUI.gridLayout.itemAt(i)
+                if type(item.widget()) == QCheckBox and item.widget().isChecked():
+                    annotChannels.append(item.widget().text())
+        if len(annotChannels) == len(self.raw.ch_names):
+            annotChannels = ['All']
+        selected_region = self.mneQtBrowser.mne.selected_region
+        idx = self.mneQtBrowser._get_onset_idx(selected_region.getRegion()[0])
+        print("Idx: " + str(idx))
+        self.channelsByAnnot[idx] = annotChannels
+        print(self.channelsByAnnot)
+        # onset1 = selected_region.onset
+        # print("Old_onset: " + str(onset1))
+        onset = selected_region.getRegion()[0]
+        offset = selected_region.getRegion()[1]
+        description = selected_region.description
+        ch_names = annotChannels
+        annotation = Annotation(onset, offset, description, orig_time=None, ch_names=ch_names)
+        print(annotation)
+        self.ChannelsUI.close()
+
+    def cancelChannelAnnotation(self):
+        self.annotChannels = ['All']
+        self.ChannelsUI.close()
 
     # Save annotations
     def saveAnnotations(self):
@@ -1290,6 +1407,7 @@ class Window(QMainWindow):
                                           acquisition=acquisition, run=run,processing=processing, recording=recording,
                                           space=space, split=split,description=description, root=self.Dataset.path,
                                           suffix='eeg', extension='.edf', datatype='eeg', check=check)
+
         # self.Dataset = Dataset('/mnt/Store/Data/Annotations/BIDS_example/BIDS_EEG/BIDS_Artifacts_Example',
         #                        'Dataset containing Cuban Human Brain Mapping database',
         #                        'raw', 'https://doi.org/10.7303/syn22324937',
@@ -1344,6 +1462,22 @@ class Session:
 class CustomEncoder(json.JSONEncoder):
     def default(self, o):
             return o.__dict__
+class Annotation:
+    def __init__(self, onset, offset, description, orig_time=None, ch_names=None):
+        self.onset = onset
+        self.offset = offset
+        self.duration = self.offset - self.onset
+        self.description = description
+        self.orig_time = orig_time
+        self.ch_names = ch_names
+
+    def __str__(self):
+         return "Annotation\n" + \
+                "Description:" + self.description + "\n" + \
+                "Onset:" + str(self.onset) + "\n" + \
+                "Duration:" + str(self.duration) + "\n" + \
+                "Ch_names:" + str(self.ch_names) + "\n"
+
 
 # application
 if __name__ == "__main__":

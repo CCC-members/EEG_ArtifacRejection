@@ -1,0 +1,44 @@
+{
+  "fir": {
+    "b":{
+      "description": "rate",
+      "value":2.0
+    },
+    "a1":{
+      "description": "shape 1",
+      "value":7.4
+    },
+    "a2":{
+      "description": "shape 2",
+      "value":8.9
+    },
+    "s1":{
+      "description": "factor 1",
+      "value":1
+    },
+    "s2":{
+      "description": "factor 2",
+      "value":1.5
+    }
+  },
+  "bold": {
+    "mT":{
+      "description": "maximum time",
+      "value":44
+    },
+    "dT":{
+      "description": "time resolution also time of repetition",
+      "value":0.5
+    }
+  },
+    "neural": {
+    "mT":{
+      "description": "maximum time",
+      "value":44
+    },
+    "dT":{
+      "description": "time resolution",
+      "value":0.01
+    }
+  }
+}

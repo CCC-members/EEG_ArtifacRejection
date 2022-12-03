@@ -9,7 +9,7 @@
     ["F9", "F9h", "F7", "F7h", "F5", "F5h", "F3", "F3h", "F1", "F1h", "Fz", "F2h", "F2", "F4h", "F4", "F6h", "F6", "F8h", "F8", "F10h", "F10"],
     ["FFT9", "FFT9h", "FFT7", "FFT7h", "FFC5", "FFC5h", "FFC3", "FFC3h", "FFC1", "FFC1h", "FFCz", "FFC2h", "FFC2", "FFC4h", "FFC4", "FFC6h", "FFC6", "FFT8h", "FFT8", "FFT10h", "FFT10"],
     ["FT9", "FT9h", "FT7", "FT7h", "FC5", "FC5h", "FC3", "FC3h", "FC1", "FC1h", "FCz", "FC2h", "FC2", "FC4h", "FC4", "FC6h", "FC6", "FT8h", "FT8", "FT10h", "FT10"],
-    ["FTT9", "FTT9h", "FTT7", "FTT7h", "FCC5", "FCC5h", "FCC3", "FCC3h", "FCC1", "FOC1h", "FCCz", "FCC2h", "FCC2", "FCC4h", "FCC4", "FCC6h", "FCC6", "FTT8h", "FTT8", "FTT10h", "FTT10"],
+    ["FTT9", "FTT9h", "FTT7", "FTT7h", "FCC5", "FCC5h", "FCC3", "FCC3h", "FCC1", "FCC1h", "FCCz", "FCC2h", "FCC2", "FCC4h", "FCC4", "FCC6h", "FCC6", "FTT8h", "FTT8", "FTT10h", "FTT10"],
     ["T9", "T9h", "T7", "T7h", "C5", "C5h", "C3", "C3h", "C1", "C1h", "Cz", "C2h", "C2", "C4h", "C4", "C6h", "C6", "T8h", "T8", "T10h", "T10"],
     ["TTP9", "TTP9h", "TTP7", "TTP7h", "CCP5", "CCP5h", "CCP3", "CCP3h", "CCP1", "CCP1h", "CCPz", "CCP2h", "CCP2", "CCP4h", "CCP4", "CCP6h", "CCP6", "TTP8h", "TTP8", "TTP10h", "TTP10"],
     ["TP9", "TP9h", "TP7", "TP7h", "CP5", "CP5h", "CP3", "CP3h", "CP1", "CP1h", "CPz", "CP2h", "CP2", "CP4h", "CP4", "CP6", "CP6h", "TP8h", "TP8", "TP10h", "TP10"],
@@ -20,6 +20,7 @@
     ["", "", "POO7", "POO7h", "POO5", "POO5h", "POO3", "POO3h", "POO1", "POO1h", "POOz", "POO2h", "POO2", "POO4h", "POO4", "POO6h", "POO6", "POO8h", "POO8", "", ""],
     ["", "", "", "", "", "", "PO9", "POO9h", "O1", "O1h", "Oz", "O2h", "O2", "POO10h", "PO10", "", "", "", "", "", ""],
     ["", "", "", "", "", "", "", "POO9", "OI1", "OI1h", "OIz", "OI2h", "OI2", "POO10", "", "", "", "", "", "", ""],
-    ["", "", "", "", "", "", "", "", "I1", "I1h", "Iz", "I2h", "I2", "", "", "", "", "", "", "", ""]
+    ["", "", "", "", "", "", "", "", "I1", "I1h", "Iz", "I2h", "I2", "", "", "", "", "", "", "", ""],
+    ["EOI", "EOD", "ECG", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
   ]
 }
