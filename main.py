@@ -876,6 +876,11 @@ class Window(QMainWindow):
                 self.MainUi.button_raw.setEnabled(False)
                 self.importRawBids(self.Dataset.bids_path)
                 self.mneQtBrowser = self.exploreRawData()
+                idx = 0
+                for annot in self.raw.annotations:
+                    self.channelsByAnnot[idx] = 'None'
+                    idx += 1
+                print(self.channelsByAnnot)
             if self.annotationMode:
                 layout = self.mneQtBrowser.mne.fig_annotation.widget().layout()
                 for i in range(layout.count()):
@@ -955,14 +960,13 @@ class Window(QMainWindow):
                 self.raw.set_annotations(new_annotations)
         else:
             new_annotations = mne.Annotations(onset=[], duration=[], description=[])
+            self.channelsByAnnot = {}
             with open('config/annotation.json', 'r') as f:
                 json_data = json.load(f)
             for annotation in json_data['annotations']:
-                    new_annotations.append(annotation['onset'], annotation['duration'], annotation['description'])
+                new_annotations.append(annotation['onset'], annotation['duration'], annotation['description'])
             # Setting new annotations
             self.raw.set_annotations(new_annotations)
-            self.channelsByAnnot = {}
-
 
     def exploreRawData(self):
         print("Plotting EEG data")
@@ -1118,19 +1122,19 @@ class Window(QMainWindow):
             # pick_kwargs = dict(meg=False, eeg=True, ref_meg=False, exclude='bads')
             # picks = mne.io.pick.pick_types(self.raw.info, **pick_kwargs)
             # loc2d = mne.channels.layout._find_topomap_coords(self.raw.info, picks)
-
             with open('template/eeg_10-05_labels.json', 'r', encoding='utf-8') as layoutJSON:
                 layout = json.loads(layoutJSON.read())
                 labels = layout['labels']
+            idx = self.mneQtBrowser._get_onset_idx(self.mneQtBrowser.mne.selected_region.getRegion()[0])
+            if 'All' in self.channelsByAnnot[idx]:
+                self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Checked)
+            else:
+                self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Unchecked)
             for channelName in self.raw.ch_names:
                 row, col = self.findIndex(channelName, labels)
                 checkBox = QCheckBox(channelName, parent=self.ChannelsUI.groupBoxChannels)
-                idx = self.mneQtBrowser._get_onset_idx(self.mneQtBrowser.mne.selected_region.getRegion()[0])
                 if idx in self.channelsByAnnot.keys():
-                    if 'All' in self.channelsByAnnot[idx]:
-                        self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Unchecked)
-                    else:
-                        self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Unchecked)
+
                     if channelName in self.channelsByAnnot[idx] or 'All' in self.channelsByAnnot[idx]:
                         checkBox.setChecked(True)
                         checkBox.setStyleSheet("color: red;")
@@ -1205,7 +1209,6 @@ class Window(QMainWindow):
                     return i, j
 
     def applyChannelAnnotation(self):
-
         annotChannels = []
         if self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Checked):
             annotChannels.append('All')
