@@ -15,17 +15,19 @@ from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QMovie, QAction, QFont
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QGroupBox, \
-    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QDialog, QWidgetItem, QLineEdit,\
+    QTableWidgetItem, QDialogButtonBox, QSizePolicy, QCheckBox, QToolButton, QWidget, QDialog, QWidgetItem, QLineEdit, \
     QSpacerItem, QToolBar, QPushButton
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from mne.viz import set_browser_backend
 import numpy as np
 import pandas as pd
+
 # from event_signal import signaler
 mne.set_log_level('warning')
 from mne_bids import (read_raw_bids, BIDSPath)
 from pathlib import Path
 import matplotlib.pyplot as plt
+
 plt.switch_backend('Qt5Agg')
 
 
@@ -272,10 +274,10 @@ class Window(QMainWindow):
         organization = self.createSessionUI.lineEditOrganization.text()
         now = datetime.now()
         current_time = now.strftime("%H:%M:%S")
-        if checktext == '' and username != '' and password != '' and fullname != '' and email != '' and\
+        if checktext == '' and username != '' and password != '' and fullname != '' and email != '' and \
                 organization != '':
             newSession = Session(username, encPassword.decode('utf8'), fullname, email, organization, current_time,
-                                   key.decode('utf8'))
+                                 key.decode('utf8'))
             self.sessions.append(newSession)
             jsonStr = json.dumps(self.sessions, indent=4, cls=CustomEncoder)
             print(jsonStr)
@@ -321,7 +323,7 @@ class Window(QMainWindow):
                 tWidget.setStyleSheet("border: 1px solid red; color: red")
                 self.createSessionUI.labelCheckField.setText("The username is already taked")
 
-    def checkPassword(self, tWidget, oStyle ):
+    def checkPassword(self, tWidget, oStyle):
         password = tWidget.text()
         MIN_SIZE = 8
         MAX_SIZE = 20
@@ -399,8 +401,10 @@ class Window(QMainWindow):
         self.MainUi.button_loginT.setStatusTip("Login")
         self.MainUi.button_loginT.clicked.connect(lambda: self.openSession())
         self.MainUi.toolBar.addWidget(self.MainUi.button_loginT)
+        print("Close session")
 
     def openSession(self):
+        print("Open session")
         self.loginUI = uic.loadUi("guide/Login.ui")
         self.loginUI.labelCreateSession.setText("<a href='self.createSession'>Create a new session</a>")
         self.loginUI.labelCreateSession.linkActivated.connect(self.actionRergisterSession)
@@ -415,10 +419,15 @@ class Window(QMainWindow):
             self.loginUI.labelCheckField.setText('Please type username and password.')
             return
         self.loginSession = []
+        print("Sessions:")
+        print(self.sessions)
         for tmpSession in self.sessions:
+            print("Session:")
+            print(tmpSession)
             if tmpSession.username == self.loginUI.lineEditUsername.text():
                 if self.loginUI.lineEditPassword.text() == Fernet(
                         tmpSession.key.encode()).decrypt(tmpSession.password.encode()).decode('utf8'):
+                    print("Login successfully")
                     self.loginUI.labelCheckField.setText('')
                     loginSession = tmpSession
                     self.MainUi.button_login.setParent(None)
@@ -437,6 +446,7 @@ class Window(QMainWindow):
                     self.MainUi.toolBar.addWidget(self.MainUi.button_logoutT)
                 else:
                     self.loginUI.labelCheckField.setText('The password is wrong.')
+                    print("Login error")
                     return
         if not tmpSession:
             self.loginUI.labelCheckField.setText('The username did not match our records.')
@@ -493,10 +503,10 @@ class Window(QMainWindow):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         fileName, _ = QFileDialog.getOpenFileName(self, "QFileDialog.getOpenFileName()", "",
-                                                 "All Files (*);;Python Files (*.py);;EEG Files (*.edf)",
-                                                options=options)
+                                                  "All Files (*);;Python Files (*.py);;EEG Files (*.edf)",
+                                                  options=options)
         fileName = '/mnt/Store/Data/CHBM/ds_bids_cbm_loris_24_11_21'
-        #fileName = '/mnt/Store/Data/CHBM/ds_bids_cbm_loris_24_11_21/sub-CBM00001/eeg/sub-CBM00001_task-protmap_eeg.edf'
+        # fileName = '/mnt/Store/Data/CHBM/ds_bids_cbm_loris_24_11_21/sub-CBM00001/eeg/sub-CBM00001_task-protmap_eeg.edf'
         if fileName:
             print(fileName)
             # self.importEDF(fileName)
@@ -506,7 +516,8 @@ class Window(QMainWindow):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         files, _ = QFileDialog.getOpenFileNames(self, "QFileDialog.getOpenFileNames()", "",
-                                                "All Files (*);;Python Files (*.py);;EEG Files (*.edf)", options=options)
+                                                "All Files (*);;Python Files (*.py);;EEG Files (*.edf)",
+                                                options=options)
         if files:
             print(files)
 
@@ -519,7 +530,7 @@ class Window(QMainWindow):
             print(fileName)
 
     def getBidsPathDialog(self):
-        folder = QFileDialog. getExistingDirectory(None, "Select Directory")
+        folder = QFileDialog.getExistingDirectory(None, "Select Directory")
         if folder:
             print(folder)
             self.dsUi.lineEdit_4.setText(folder)
@@ -527,7 +538,7 @@ class Window(QMainWindow):
             # self.fileName = fileName
 
     def getLoadBidsPathDialog(self):
-        folder = QFileDialog. getExistingDirectory(None, "Select Directory")
+        folder = QFileDialog.getExistingDirectory(None, "Select Directory")
         if folder:
             print("Folder:" + folder)
             self.lds.lineEdit_Path.setText(folder)
@@ -578,7 +589,7 @@ class Window(QMainWindow):
             self.dsPartUi = uic.loadUi("guide/Participants.ui")
             self.dsPartUi.show()
             # Filling Dataset Descriptors
-            itemsList = ['-Select-', 'datatype','session', 'task', 'acquisition', 'run',
+            itemsList = ['-Select-', 'datatype', 'session', 'task', 'acquisition', 'run',
                          'processing', 'recording', 'space', 'split', 'description', 'suffix', 'extension']
             self.dsPartUi.comboBoxDescrip.addItems(itemsList)
             # Formatting Dataset Descriptors TableWidget
@@ -699,8 +710,8 @@ class Window(QMainWindow):
             msg.exec()
 
     def onCheckDatasetDescrip(self):
-        subject, session, task, acquisition, run, processing, recording, space, split, description, root,\
-        suffix, extension, datatype, check = None, None, None, None, None, None, None, None, None, None, None, None,\
+        subject, session, task, acquisition, run, processing, recording, space, split, description, root, \
+        suffix, extension, datatype, check = None, None, None, None, None, None, None, None, None, None, None, None, \
                                              None, None, True
         root = self.Dataset.path
         for i in range(self.dsPartUi.tableWidgetDescrip.rowCount()):
@@ -761,7 +772,7 @@ class Window(QMainWindow):
             msg.setText("Notification")
             msg.setInformativeText("We can't find any data with the specified structure description.<br>" +
                                    fe.filename + "<br>"
-                                   "Please check the Dataset structure")
+                                                 "Please check the Dataset structure")
             msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
@@ -863,12 +874,17 @@ class Window(QMainWindow):
             if subID in self.Dataset.tmpRaws:
                 print('Loading tmp data')
                 self.MainUi.button_raw.setEnabled(True)
-                self.mneQtBrowser = self.importTmpData()
+                mneQtBrowser = self.importTmpData()
             else:
                 print('Loading raw data')
                 self.MainUi.button_raw.setEnabled(False)
                 self.importRawBids(self.Dataset.bids_path)
                 self.mneQtBrowser = self.exploreRawData()
+                idx = 0
+                for annot in self.raw.annotations:
+                    self.channelsByAnnot[idx] = 'None'
+                    idx += 1
+                print(self.channelsByAnnot)
             if self.annotationMode:
                 layout = self.mneQtBrowser.mne.fig_annotation.widget().layout()
                 for i in range(layout.count()):
@@ -879,9 +895,14 @@ class Window(QMainWindow):
                 self.MainUi.pushButtonChannels = QPushButton("Select channels")
                 self.MainUi.pushButtonChannels.clicked.connect(
                     lambda: self.selectChannels())
-                layout.insertWidget(layout.count()-1, self.MainUi.pushButtonChannels)
+                layout.insertWidget(layout.count() - 1, self.MainUi.pushButtonChannels)
+                self.MainUi.pushButtonChannels = QPushButton("Delete")
+                self.MainUi.pushButtonChannels.clicked.connect(
+                    lambda: self.deleteAnnotation())
+                layout.insertWidget(layout.count() - 1, self.MainUi.pushButtonChannels)
             self.MainUi.horizontalLayoutMain.addWidget(self.mneQtBrowser)
             self.checkToolsBarOptions(True)
+
         except FileNotFoundError as fe:
             msg = QMessageBox()
             msg.setWindowTitle("Participants selection")
@@ -889,7 +910,7 @@ class Window(QMainWindow):
             msg.setText("Notification")
             msg.setInformativeText("We can't find the specified structure description for Subject:" + subID + " .<br>" +
                                    fe.filename + "<br>"
-                                   "This participant will rejected from the analysis.")
+                                                 "This participant will rejected from the analysis.")
             msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
@@ -903,12 +924,13 @@ class Window(QMainWindow):
                                         show_options=False)
         mneQtBrowser.mne.toolbar.setVisible(False)
         mneQtBrowser.fake_keypress('a')
+
         return mneQtBrowser
 
     def importRawBids(self, bids_path):
         # new_annot = mne.io.kit.read_mrk('config/hed.mrk')
         self.raw = read_raw_bids(bids_path=bids_path, verbose=True)
-        #raw = mne.io.read_raw_edf(file_name, preload=True, stim_channel='auto', verbose=True)
+        # raw = mne.io.read_raw_edf(file_name, preload=True, stim_channel='auto', verbose=True)
         data = self.raw.get_data()
         self.raw.load_data()
         # you can get the metadata included in the file and a list of all channels:
@@ -920,7 +942,11 @@ class Window(QMainWindow):
         for electrode in range(nchannels):
             oldname = self.raw.ch_names[electrode]
             newname = oldname.replace('-REF', '', 1)
-            self.raw.rename_channels({oldname : newname}, allow_duplicates=False, verbose=None)
+            self.raw.rename_channels({oldname: newname}, allow_duplicates=False, verbose=None)
+        onset = []
+        duration = []
+        description = []
+        ch_names = []
         if not self.annotationMode:
             events, events_id = mne.events_from_annotations(self.raw)
             self.events = events
@@ -938,6 +964,7 @@ class Window(QMainWindow):
                 self.raw.set_annotations(new_annotations)
         else:
             new_annotations = mne.Annotations(onset=[], duration=[], description=[])
+            self.channelsByAnnot = {}
             with open('config/annotation.json', 'r') as f:
                 json_data = json.load(f)
             for annotation in json_data['annotations']:
@@ -967,7 +994,8 @@ class Window(QMainWindow):
                 break
 
     def checkWizardOptions(self):
-        print("Current participant: " + str(self.currentPart + 1) + ". Number of participants: " + str(len(self.DataList)))
+        print("Current participant: " + str(self.currentPart + 1) + ". Number of participants: " + str(
+            len(self.DataList)))
         if len(self.DataList) == 1:
             self.MainUi.pushButtonSave.setEnabled(True)
             self.MainUi.pushButtonSaveAll.setEnabled(False)
@@ -990,7 +1018,7 @@ class Window(QMainWindow):
             self.MainUi.pushButtonBack.setEnabled(True)
             self.MainUi.pushButtonNext.setEnabled(True)
             self.MainUi.pushButtonNextAll.setEnabled(True)
-        if self.currentPart == len(self.DataList)-1:
+        if self.currentPart == len(self.DataList) - 1:
             self.MainUi.pushButtonSave.setEnabled(True)
             self.MainUi.pushButtonSaveAll.setEnabled(True)
             self.MainUi.pushButtonBackAll.setEnabled(True)
@@ -1052,6 +1080,35 @@ class Window(QMainWindow):
         self.panelWizard()
         print('Wizard Next All')
 
+    def deleteAnnotation(self):
+        if self.mneQtBrowser.mne.selected_region is None:
+            msg = QMessageBox()
+            msg.setWindowTitle("Delete annotation")
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("Notification")
+            msg.setInformativeText("You should select an annotation first.")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+            return
+        else:
+            selected_region = self.mneQtBrowser.mne.selected_region
+            msg = QMessageBox()
+            msg.setWindowTitle("Delete annotation")
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("Notification")
+            msg.setInformativeText("Are you sure do you want to delete the annotation: <br>" +
+                                   "Description: " + selected_region.description + "<br>" +
+                                   "Onset:" + str(selected_region.getRegion()[0]) + "<br>" +
+                                   "Offset:" + str(selected_region.getRegion()[1]) + "<br>")
+            msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+            ans = msg.exec()
+            if ans == QMessageBox.Ok:
+                idx = self.mneQtBrowser._get_onset_idx(selected_region.getRegion()[0])
+                self.mneQtBrowser._remove_region(selected_region, True)
+                del self.channelsByAnnot[idx]
+
     def selectChannels(self):
         if self.mneQtBrowser.mne.selected_region is None:
             msg = QMessageBox()
@@ -1065,12 +1122,19 @@ class Window(QMainWindow):
             return
         else:
             self.ChannelsUI = uic.loadUi("guide/DialogChannels.ui")
+            # fig = self.raw.plot_sensors(show_names=True, sphere=0, show=False, ch_type='eeg')
+            # layout_from_raw = mne.channels.make_eeg_layout(self.raw.info)
+            # pick_kwargs = dict(meg=False, eeg=True, ref_meg=False, exclude='bads')
+            # picks = mne.io.pick.pick_types(self.raw.info, **pick_kwargs)
+            # loc2d = mne.channels.layout._find_topomap_coords(self.raw.info, picks)
             with open('template/eeg_10-05_labels.json', 'r', encoding='utf-8') as layoutJSON:
                 layout = json.loads(layoutJSON.read())
                 labels = layout['labels']
             idx = self.mneQtBrowser._get_onset_idx(self.mneQtBrowser.mne.selected_region.getRegion()[0])
-            checkedAnnot = self.raw.annotations.__getitem__(idx)
-            if 'ch_names' not in checkedAnnot.keys():
+            print("Len Channels:" + str(len(self.channelsByAnnot)))
+            print("Len Annotations:" + str(len(self.raw.annotations)))
+
+            if idx not in self.channelsByAnnot.keys():
                 self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Checked)
                 for channelName in self.raw.ch_names:
                     row, col = self.findIndex(channelName, labels)
@@ -1081,8 +1145,30 @@ class Window(QMainWindow):
                         lambda: self.onChangeColor())
                     self.ChannelsUI.gridLayout.addWidget(checkBox, row, col)
             else:
-                ch_names = checkedAnnot['ch_names']
-                if not ch_names:
+                if len(self.channelsByAnnot) == len(self.raw.annotations):
+                    if 'All' in self.channelsByAnnot[idx]:
+                        self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Checked)
+                    for channelName in self.raw.ch_names:
+                        row, col = self.findIndex(channelName, labels)
+                        checkBox = QCheckBox(channelName, parent=self.ChannelsUI.groupBoxChannels)
+                        if channelName in self.channelsByAnnot[idx] or 'All' in self.channelsByAnnot[idx]:
+                            checkBox.setChecked(True)
+                            checkBox.setStyleSheet("color: red;")
+                        else:
+                            checkBox.setChecked(False)
+                            checkBox.setStyleSheet("color: blue;")
+                        checkBox.clicked.connect(
+                            lambda: self.onChangeColor())
+                        self.ChannelsUI.gridLayout.addWidget(checkBox, row, col)
+                else:
+                    # Increment Key in self.channelsByAnnot
+                    newChannelsByAnnot = {}
+                    for idxKey in self.channelsByAnnot.keys():
+                        if idxKey < idx:
+                            newChannelsByAnnot[idxKey] = self.channelsByAnnot[idxKey]
+                        else:
+                            newChannelsByAnnot[idxKey + 1] = self.channelsByAnnot[idxKey]
+                    self.channelsByAnnot = newChannelsByAnnot
                     self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Checked)
                     for channelName in self.raw.ch_names:
                         row, col = self.findIndex(channelName, labels)
@@ -1092,27 +1178,31 @@ class Window(QMainWindow):
                         checkBox.clicked.connect(
                             lambda: self.onChangeColor())
                         self.ChannelsUI.gridLayout.addWidget(checkBox, row, col)
-                else:
-                    self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Unchecked)
-                    for channelName in self.raw.ch_names:
-                        row, col = self.findIndex(channelName, labels)
-                        checkBox = QCheckBox(channelName, parent=self.ChannelsUI.groupBoxChannels)
-                        if channelName in ch_names:
-                            checkBox.setChecked(True)
-                            checkBox.setStyleSheet("color: red;")
-                        else:
-                            checkBox.setChecked(False)
-                            checkBox.setStyleSheet("color: blue;")
-                        checkBox.clicked.connect(
-                            lambda: self.onChangeColor())
-                        self.ChannelsUI.gridLayout.addWidget(checkBox, row, col)
+            # for i in range(len(labels)):
+            #     for j in range(len(labels[i])):
+            #         if labels[i][j] != "":
+            #             checkBox = QCheckBox(labels[i][j])
+            #             checkBox.setChecked(True)
+            #             self.ChannelsUI.gridLayout.addWidget(checkBox, i, j)
             self.ChannelsUI.gridLayout.setVerticalSpacing(15)
             self.ChannelsUI.gridLayout.setHorizontalSpacing(0)
-            self.ChannelsUI.checkBoxAll.clicked.connect(lambda: self.onSelectAllChannels(self.ChannelsUI.checkBoxAll.isChecked()))
+            self.ChannelsUI.checkBoxAll.clicked.connect(
+                lambda: self.onSelectAllChannels(self.ChannelsUI.checkBoxAll.isChecked()))
             btnApply = self.ChannelsUI.buttonBox.button(QDialogButtonBox.StandardButton.Apply)
             btnApply.clicked.connect(lambda: self.applyChannelAnnotation())
             btnCancel = self.ChannelsUI.buttonBox.button(QDialogButtonBox.StandardButton.Cancel)
             btnCancel.clicked.connect(lambda: self.cancelChannelAnnotation())
+
+            # same result as mne.channels.find_layout(raw.info, ch_type='eeg')
+            # fig = layout_from_raw.plot(show=False)
+            # fig.canvas.toolbar_visible = False
+            # fig.canvas.header_visible = False
+            # fig.canvas.footer_visible = False
+            # self.ChannelsUI.verticalLayout.addWidget(FigureCanvasQTAgg(fig))
+            # for channelName in self.raw.ch_names:
+            #     checkBox = QCheckBox(channelName)
+            #     checkBox.setChecked(True)
+            #     self.ChannelsUI.verticalLayout.addWidget(checkBox)
             self.ChannelsUI.show()
 
     def onSelectAllChannels(self, checkedAll):
@@ -1151,15 +1241,22 @@ class Window(QMainWindow):
 
     def applyChannelAnnotation(self):
         annotChannels = []
-        if not self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Checked):
+        if self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Checked):
+            annotChannels.append('All')
+        else:
             for i in range(self.ChannelsUI.gridLayout.count()):
                 item = self.ChannelsUI.gridLayout.itemAt(i)
                 if type(item.widget()) == QCheckBox and item.widget().isChecked():
                     annotChannels.append(item.widget().text())
         if len(annotChannels) == len(self.raw.ch_names):
-            annotChannels = []
+            annotChannels = ['All']
         selected_region = self.mneQtBrowser.mne.selected_region
         idx = self.mneQtBrowser._get_onset_idx(selected_region.getRegion()[0])
+        print("Idx: " + str(idx))
+        self.channelsByAnnot[idx] = annotChannels
+        print(self.channelsByAnnot)
+        # onset1 = selected_region.onset
+        # print("Old_onset: " + str(onset1))
         onset = selected_region.getRegion()[0]
         offset = selected_region.getRegion()[1]
         duration = offset - onset
@@ -1167,9 +1264,12 @@ class Window(QMainWindow):
         ch_names = annotChannels
         self.raw.annotations.delete(idx)
         self.raw.annotations.append(onset, duration, description, [ch_names])
+        print("Channels: ")
+        print(self.raw.annotations.__getitem__(idx)['ch_names'])
         self.ChannelsUI.close()
 
     def cancelChannelAnnotation(self):
+        self.annotChannels = ['All']
         self.ChannelsUI.close()
 
     # Save annotations
@@ -1182,6 +1282,7 @@ class Window(QMainWindow):
         msg.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
         ans = msg.exec()
         if ans == QMessageBox.Save:
+            print("Printing annotation after fig")
             self.rawTmp = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
             annotations = self.rawTmp.annotations
             indeces = []
@@ -1307,7 +1408,7 @@ class Window(QMainWindow):
         fit_params = dict(fastica_it=5)
         random_state = 42
         ica = mne.preprocessing.ICA(n_components=n_components, method=method, max_iter=max_iter,
-                                    fit_params=fit_params,random_state=random_state)
+                                    fit_params=fit_params, random_state=random_state)
         ica.fit(epochs_ica)
         ica.plot_components()
 
@@ -1340,12 +1441,30 @@ class Window(QMainWindow):
         suffix, extension, datatype, check = None, None, None, None, None, None, None, None, None, None, None, None, \
                                              None, None, True
         self.Dataset.bids_path = BIDSPath(subject=self.DataList[0], session=session, task='protmap',
-                                          acquisition=acquisition, run=run,processing=processing, recording=recording,
-                                          space=space, split=split,description=description, root=self.Dataset.path,
+                                          acquisition=acquisition, run=run, processing=processing, recording=recording,
+                                          space=space, split=split, description=description, root=self.Dataset.path,
                                           suffix='eeg', extension='.edf', datatype='eeg', check=check)
+
+        # self.Dataset = Dataset('/mnt/Store/Data/Annotations/BIDS_example/BIDS_EEG/BIDS_Artifacts_Example',
+        #                        'Dataset containing Cuban Human Brain Mapping database',
+        #                        'raw', 'https://doi.org/10.7303/syn22324937',
+        #                        ["Pedro A.Valdes-Sosa", "Lidice Galan-Garcia", "Jorge Bosch-Bayard",
+        #                         "Maria L. Bringas-Vega", "Eduardo Aubert-Vazquez", "Iris Rodriguez-Gil",
+        #                         "Samir Das", "Cecile Madjar", "Trinidad Virues-Alba", "Zia Mohades",
+        #                         "Leigh C. MacIntyre", "Christine Rogers", "Shawn Brown", "Lourdes Valdes-Urrutia",
+        #                         "Alan C. Evans", "Mitchell J. Valdes-Sosa"])
+        # self.DataList = ['00000254', '00000297', '00000458', '00000630', '00000647', '00000715']
+        # subject, session, task, acquisition, run, processing, recording, space, split, description, root, \
+        # suffix, extension, datatype, check = None, None, None, None, None, None, None, None, None, None, None, None, \
+        #                                      None, None, True
+        # self.Dataset.bids_path = BIDSPath(subject=self.DataList[0], session='s005', task='rest',
+        #                                   acquisition=acquisition, run='000', processing=processing,
+        #                                   recording=recording,
+        #                                   space=space, split=split, description=description, root=self.Dataset.path,
+        #                                   suffix='eeg', extension='.edf', datatype='eeg', check=check)
+
         self.currentPart = 0
         self.panelWizard()
-
 
     def testAnnotation(self):
         for annot in self.raw.annotations:
@@ -1359,6 +1478,7 @@ class Window(QMainWindow):
     def customSessionDecoder(self, sessionDict):
         return namedtuple('X', sessionDict.keys())(*sessionDict.values())
 
+
 class Dataset:
     def __init__(self, path, name, dstype, doi, authors):
         self.path = path
@@ -1367,6 +1487,7 @@ class Dataset:
         self.doi = doi
         self.authors = authors
         self.tmpRaws = {}
+
 
 class Session:
     def __init__(self, username, password, fullname, email, organization, last_login, key):
@@ -1379,9 +1500,12 @@ class Session:
         self.key = key
         self.data = []
 
+
 class CustomEncoder(json.JSONEncoder):
     def default(self, o):
-            return o.__dict__
+        return o.__dict__
+
+
 class Annotation:
     def __init__(self, onset, offset, description, orig_time=None, ch_names=None):
         self.onset = onset
@@ -1392,11 +1516,11 @@ class Annotation:
         self.ch_names = ch_names
 
     def __str__(self):
-         return "Annotation\n" + \
-                "Description:" + self.description + "\n" + \
-                "Onset:" + str(self.onset) + "\n" + \
-                "Duration:" + str(self.duration) + "\n" + \
-                "Ch_names:" + str(self.ch_names) + "\n"
+        return "Annotation\n" + \
+               "Description:" + self.description + "\n" + \
+               "Onset:" + str(self.onset) + "\n" + \
+               "Duration:" + str(self.duration) + "\n" + \
+               "Ch_names:" + str(self.ch_names) + "\n"
 
 
 # application
