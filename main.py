@@ -51,6 +51,8 @@ class Window(QMainWindow):
         # Loading configurations
         self.getAppProperties()
 
+        self.activeSession = []
+
         self.mne = mne
 
     def initUI(self):
@@ -58,6 +60,7 @@ class Window(QMainWindow):
         self.MainUi.show()
         self.width, self.height = pyautogui.size()
         self.MainUi.setGeometry(0, 0, self.width, self.height)
+        self.MainUi.pushButtonExport.clicked.connect(lambda: self.exportAnnotation())
         self.MainUi.pushButtonSave.clicked.connect(lambda: self.WizardSave())
         self.MainUi.pushButtonSaveAll.clicked.connect(lambda: self.WizardSaveAll())
         self.MainUi.pushButtonBackAll.clicked.connect(lambda: self.WizardBackAll())
@@ -66,6 +69,7 @@ class Window(QMainWindow):
         self.MainUi.pushButtonNextAll.clicked.connect(lambda: self.WizardNextAll())
 
     def onMainOptions(self):
+        self.MainUi.pushButtonExport.setIcon(QIcon('images/icons/export.png'))
         self.MainUi.pushButtonSave.setIcon(QIcon('images/icons/save.png'))
         self.MainUi.pushButtonSaveAll.setIcon(QIcon('images/icons/saveAll.png'))
         self.MainUi.pushButtonBackAll.setIcon(QIcon('images/icons/backAll.png'))
@@ -215,7 +219,10 @@ class Window(QMainWindow):
         self.configPath = Path(Path.home(), '.Annot')
         if not self.configPath.exists():
             os.makedirs(self.configPath)
-        self.dataseTmpPath = Path(Path.home(), '.Annot', 'Dataset')
+        self.DatasetsPath = Path(Path.home(), '.Annot', 'Datasets')
+        if not self.DatasetsPath.exists():
+            os.makedirs(self.DatasetsPath)
+        self.dataseTmpPath = Path(Path.home(), '.Annot', 'tmpData')
         if not self.dataseTmpPath.exists():
             os.makedirs(self.dataseTmpPath)
         self.sessionPath = Path(Path.home(), '.Annot', 'Session')
@@ -229,7 +236,7 @@ class Window(QMainWindow):
             for session in sessions:
                 self.sessions.append(Session(session['username'], session['password'], session['fullname'],
                                              session['email'], session['organization'], session['last_login'],
-                                             session['key']))
+                                             session['key'], session['Datasets']))
 
     def actionRergisterSession(self):
         print("Create session")
@@ -275,7 +282,7 @@ class Window(QMainWindow):
         if checktext == '' and username != '' and password != '' and fullname != '' and email != '' and\
                 organization != '':
             newSession = Session(username, encPassword.decode('utf8'), fullname, email, organization, current_time,
-                                   key.decode('utf8'))
+                                   key.decode('utf8'), [])
             self.sessions.append(newSession)
             jsonStr = json.dumps(self.sessions, indent=4, cls=CustomEncoder)
             print(jsonStr)
@@ -414,13 +421,12 @@ class Window(QMainWindow):
         if not self.loginUI.lineEditUsername.text() or not self.loginUI.lineEditPassword.text():
             self.loginUI.labelCheckField.setText('Please type username and password.')
             return
-        self.loginSession = []
+        self.activeSession = []
         for tmpSession in self.sessions:
             if tmpSession.username == self.loginUI.lineEditUsername.text():
                 if self.loginUI.lineEditPassword.text() == Fernet(
                         tmpSession.key.encode()).decrypt(tmpSession.password.encode()).decode('utf8'):
                     self.loginUI.labelCheckField.setText('')
-                    loginSession = tmpSession
                     self.MainUi.button_login.setParent(None)
                     self.MainUi.button_loginT.setParent(None)
                     # Logout Tool Action
@@ -433,7 +439,7 @@ class Window(QMainWindow):
                     self.MainUi.button_logoutT.setText('')
                     self.MainUi.button_logoutT.setStatusTip("Logout")
                     self.MainUi.button_logoutT.clicked.connect(lambda: self.closeSession())
-                    self.MainUi.button_logoutT.setText(loginSession.fullname)
+                    self.MainUi.button_logoutT.setText(tmpSession.fullname)
                     self.MainUi.toolBar.addWidget(self.MainUi.button_logoutT)
                 else:
                     self.loginUI.labelCheckField.setText('The password is wrong.')
@@ -441,7 +447,7 @@ class Window(QMainWindow):
         if not tmpSession:
             self.loginUI.labelCheckField.setText('The username did not match our records.')
             return
-        self.loginSession = tmpSession
+        self.activeSession = tmpSession
         self.loginUI.close()
 
     # Checking annotation mode
@@ -546,8 +552,8 @@ class Window(QMainWindow):
                 groupBox = QGroupBox("Authors: ")
                 groupBox.setLayout(formLayout)
                 self.lds.scrollAreaAuth.setWidget(groupBox)
-                self.Dataset = Dataset(folder, ds_descrip['Name'], ds_descrip['DatasetType'], ds_descrip['DatasetDOI'],
-                                       ds_descrip['Authors'])
+                self.currentDataset = Dataset(folder, ds_descrip['Name'], ds_descrip['DatasetType'],
+                                              ds_descrip['DatasetDOI'], ds_descrip['Authors'])
             else:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Warning)
@@ -702,7 +708,7 @@ class Window(QMainWindow):
         subject, session, task, acquisition, run, processing, recording, space, split, description, root,\
         suffix, extension, datatype, check = None, None, None, None, None, None, None, None, None, None, None, None,\
                                              None, None, True
-        root = self.Dataset.path
+        root = self.currentDataset.path
         for i in range(self.dsPartUi.tableWidgetDescrip.rowCount()):
             descriptor = self.dsPartUi.tableWidgetDescrip.item(i, 0).text()
             value = self.dsPartUi.tableWidgetDescrip.item(i, 1).text()
@@ -730,11 +736,12 @@ class Window(QMainWindow):
         subject = participants[0][0].replace('sub-', '')
 
         try:
-            self.Dataset.bids_path = BIDSPath(subject=subject, session=session, task=task, acquisition=acquisition,
-                                              run=run, processing=processing, recording=recording, space=space,
-                                              split=split, description=description, root=root, suffix=suffix,
-                                              extension=extension, datatype=datatype, check=check)
-            self.raw = read_raw_bids(bids_path=self.Dataset.bids_path, verbose=True)
+            self.currentDataset.bids_path = BIDSPath(subject=subject, session=session, task=task,
+                                                     acquisition=acquisition, run=run, processing=processing,
+                                                     recording=recording, space=space, split=split,
+                                                     description=description, root=root, suffix=suffix,
+                                                     extension=extension, datatype=datatype, check=check)
+            testData = read_raw_bids(bids_path=self.currentDataset.bids_path, verbose=True)
             msg = QMessageBox()
             msg.setWindowTitle("Dataset descriptors")
             msg.setIcon(QMessageBox.Icon.Information)
@@ -768,10 +775,10 @@ class Window(QMainWindow):
             return
 
     def showParticipants(self):
-        if not hasattr(self.Dataset, 'bids_path'):
+        if not hasattr(self.currentDataset, 'bids_path'):
             self.onCheckDatasetDescrip()
         self.dsPartUi.checkBoxAll.setEnabled(True)
-        root = str(self.Dataset.bids_path.root)
+        root = str(self.currentDataset.bids_path.root)
         self.rejectedPart = []
         participantsfile = root + "/participants.tsv"
         participants = []
@@ -825,12 +832,13 @@ class Window(QMainWindow):
             self.dsPartUi.tableParticipants.setItem(i, 0, item)
 
     def loadRawfromParticipants(self):
-        self.DataList = []
+        self.currentDataset.participants = []
         for i in range(self.dsPartUi.tableParticipants.rowCount()):
             item = self.dsPartUi.tableParticipants.item(i, 0)
+            subID = item.text().replace('sub-', '')
             if item is not None and item.checkState() == Qt.CheckState.Checked:
-                self.DataList.append(item.text())
-        if not self.DataList:
+                self.currentDataset.participants.append(subID)
+        if not self.currentDataset.participants:
             msg = QMessageBox()
             msg.setWindowTitle("Participants selection")
             msg.setIcon(QMessageBox.Icon.Warning)
@@ -849,26 +857,24 @@ class Window(QMainWindow):
     def panelWizard(self):
         # self.movieLoading.start()
         # self.loading.show()
-        subject = self.DataList[self.currentPart]
-        subID = subject.replace('sub-', '')
+        subID = self.currentDataset.participants[self.currentPart]
         print('-->> Importing subject: ' + subID)
         self.MainUi.labelTitle = QLabel('Participant: ' + subID + '.')
         self.MainUi.labelTitle.setFont(QFont('Arial', 14, QFont.Weight.Bold))
-        self.Dataset.bids_path.update(subject=subID)
+        self.currentDataset.bids_path.update(subject=subID)
         # Importing EEG
         try:
             # Cleaning Principal panelWizard
             for i in reversed(range(self.MainUi.horizontalLayoutMain.count())):
                 self.MainUi.horizontalLayoutMain.itemAt(i).widget().deleteLater()
-            if subID in self.Dataset.tmpRaws:
-                print('Loading tmp data')
+            # Getting Tmp or Raw Data
+            if subID in self.currentDataset.tmpRaws:
                 self.MainUi.button_raw.setEnabled(True)
-                self.mneQtBrowser = self.importTmpData()
+                self.currentData = self.importTmpData()
             else:
-                print('Loading raw data')
                 self.MainUi.button_raw.setEnabled(False)
-                self.importRawBids(self.Dataset.bids_path)
-                self.mneQtBrowser = self.exploreRawData()
+                self.currentData = self.importRawBids(self.currentDataset.bids_path)
+            self.mneQtBrowser = self.exploreData()
             if self.annotationMode:
                 layout = self.mneQtBrowser.mne.fig_annotation.widget().layout()
                 for i in range(layout.count()):
@@ -898,44 +904,43 @@ class Window(QMainWindow):
         # self.loading.close()
 
     def importTmpData(self):
-        self.rawTmp = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
-        mneQtBrowser = self.rawTmp.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red',
-                                        show_options=False)
-        mneQtBrowser.mne.toolbar.setVisible(False)
-        mneQtBrowser.fake_keypress('a')
-        return mneQtBrowser
+        print("Loading tmpData for: " + self.currentDataset.bids_path.subject)
+        currentData = mne.io.read_raw_fif(self.currentDataset.tmpRaws.get(
+            self.currentDataset.bids_path.subject), preload=True)
+        return currentData
 
     def importRawBids(self, bids_path):
+        print('Loading rawData for: ' + bids_path.subject )
         # new_annot = mne.io.kit.read_mrk('config/hed.mrk')
-        self.raw = read_raw_bids(bids_path=bids_path, verbose=True)
+        raw = read_raw_bids(bids_path=bids_path, verbose=True)
         #raw = mne.io.read_raw_edf(file_name, preload=True, stim_channel='auto', verbose=True)
-        data = self.raw.get_data()
-        self.raw.load_data()
+        data = raw.get_data()
+        raw.load_data()
         # you can get the metadata included in the file and a list of all channels:
-        info = self.raw.info
-        channels = self.raw.ch_names
-        time_serie = self.raw.times
+        info = raw.info
+        channels = raw.ch_names
+        time_serie = raw.times
         nchannels = len(channels)
         # Rename Channels
         for electrode in range(nchannels):
-            oldname = self.raw.ch_names[electrode]
+            oldname = raw.ch_names[electrode]
             newname = oldname.replace('-REF', '', 1)
-            self.raw.rename_channels({oldname : newname}, allow_duplicates=False, verbose=None)
+            raw.rename_channels({oldname : newname}, allow_duplicates=False, verbose=None)
         if not self.annotationMode:
-            events, events_id = mne.events_from_annotations(self.raw)
+            events, events_id = mne.events_from_annotations(raw)
             self.events = events
             self.events_id = events_id
             # Getting derivatives
             derivativesPath = Path(os.path.join(bids_path.root, 'derivatives'))
             derivativesFiles = list(derivativesPath.rglob('*' + bids_path.subject + '*annotations.tsv'))
             if derivativesFiles:
-                new_annotations = self.raw.annotations
+                new_annotations = raw.annotations
                 with open(derivativesFiles[0]) as file:
                     for rowfile in csv.reader(file):
                         annotation = rowfile[0].split('\t')
                         if annotation[0] != 'onset' and annotation[1] != 'duration':
                             new_annotations.append(annotation[0], annotation[1], annotation[2])
-                self.raw.set_annotations(new_annotations)
+                raw.set_annotations(new_annotations)
         else:
             new_annotations = mne.Annotations(onset=[], duration=[], description=[])
             with open('config/annotation.json', 'r') as f:
@@ -943,21 +948,24 @@ class Window(QMainWindow):
             for annotation in json_data['annotations']:
                 new_annotations.append(annotation['onset'], annotation['duration'], annotation['description'])
             # Setting new annotations
-            self.raw.set_annotations(new_annotations)
+            raw.set_annotations(new_annotations)
+        return raw
 
-    def exploreRawData(self):
+    def exploreData(self):
         print("Plotting EEG data")
         set_browser_backend("qt")
-        mneQtBrowser = self.raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red',
-                                     show_options=True, title=("Participant: %s" % self.DataList[self.currentPart]))
-        mneQtBrowser.mne.toolbar.setVisible(False)
+        mneQtBrowser = self.currentData.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red',
+                                             show_options=True,
+                                             title=("Participant: %s" % self.currentDataset.participants[
+                                                 self.currentPart]))
+        # mneQtBrowser.mne.toolbar.setVisible(False)
         mneQtBrowser.fake_keypress('a')
         return mneQtBrowser
 
     def showRawDataAction(self, checked):
         if checked:
-            self.importRawBids(self.Dataset.bids_path)
-            self.MainUi.horizontalLayoutMain.addWidget(self.exploreRawData())
+            self.importRawBids(self.currentDataset.bids_path)
+            self.MainUi.horizontalLayoutMain.addWidget(self.exploreData())
         else:
             for i in reversed(range(self.MainUi.horizontalLayoutMain.count())):
                 if self.MainUi.horizontalLayoutMain.itemAt(i).widget():
@@ -967,8 +975,10 @@ class Window(QMainWindow):
                 break
 
     def checkWizardOptions(self):
-        print("Current participant: " + str(self.currentPart + 1) + ". Number of participants: " + str(len(self.DataList)))
-        if len(self.DataList) == 1:
+        print("Current participant: " + str(self.currentPart + 1) + ". Number of participants: " +
+              str(len(self.currentDataset.participants)))
+        if len(self.currentDataset.participants) == 1:
+            self.MainUi.pushButtonExport.setEnabled(True)
             self.MainUi.pushButtonSave.setEnabled(True)
             self.MainUi.pushButtonSaveAll.setEnabled(False)
             self.MainUi.pushButtonBackAll.setEnabled(False)
@@ -977,6 +987,7 @@ class Window(QMainWindow):
             self.MainUi.pushButtonNextAll.setEnabled(False)
             return
         if self.currentPart == 0:
+            self.MainUi.pushButtonExport.setEnabled(True)
             self.MainUi.pushButtonSave.setEnabled(True)
             self.MainUi.pushButtonSaveAll.setEnabled(True)
             self.MainUi.pushButtonBackAll.setEnabled(False)
@@ -984,13 +995,15 @@ class Window(QMainWindow):
             self.MainUi.pushButtonNext.setEnabled(True)
             self.MainUi.pushButtonNextAll.setEnabled(True)
         if self.currentPart != 0:
+            self.MainUi.pushButtonExport.setEnabled(True)
             self.MainUi.pushButtonSave.setEnabled(True)
             self.MainUi.pushButtonSaveAll.setEnabled(True)
             self.MainUi.pushButtonBackAll.setEnabled(True)
             self.MainUi.pushButtonBack.setEnabled(True)
             self.MainUi.pushButtonNext.setEnabled(True)
             self.MainUi.pushButtonNextAll.setEnabled(True)
-        if self.currentPart == len(self.DataList)-1:
+        if self.currentPart == len(self.currentDataset.participants)-1:
+            self.MainUi.pushButtonExport.setEnabled(True)
             self.MainUi.pushButtonSave.setEnabled(True)
             self.MainUi.pushButtonSaveAll.setEnabled(True)
             self.MainUi.pushButtonBackAll.setEnabled(True)
@@ -1009,20 +1022,19 @@ class Window(QMainWindow):
         saving.labelSaving.setScaledContents(True)
         saving.setModal(True)
         saving.open()
-        raw_temp = self.raw.copy()
-        subjectPath = self.dataseTmpPath.joinpath(self.Dataset.bids_path.subject)
-        if not subjectPath.exists():
-            os.makedirs(subjectPath)
-        tmpFile = subjectPath.joinpath(self.Dataset.bids_path.subject + '_rawdata_eeg.fif')
-        raw_temp.save(tmpFile, overwrite=True)
-        self.Dataset.tmpRaws[self.Dataset.bids_path.subject] = tmpFile
+        new_bids_path = self.currentDataset.bids_path.copy()
+        tmpBidsPath = new_bids_path.update(root=self.dataseTmpPath, extension='.fif')
+        basePath = str(tmpBidsPath).replace(tmpBidsPath.basename, '')
+        if not Path(basePath).exists():
+            os.makedirs(basePath)
+        raw_temp = self.currentData.copy()
+        raw_temp.save(Path(basePath, new_bids_path.basename), overwrite=True)
+        self.currentDataset.tmpRaws[tmpBidsPath.subject] = tmpBidsPath
         saving.close()
         print('Temporal data saved.')
 
     def WizardSave(self):
         self.WizardSaveTmp()
-        if self.annotationMode:
-            self.saveAnnotations()
         print('Save')
 
     def WizardSaveAll(self):
@@ -1048,7 +1060,7 @@ class Window(QMainWindow):
 
     def WizardNextAll(self):
         self.WizardSaveTmp()
-        self.currentPart = len(self.DataList) - 1
+        self.currentPart = len(self.currentDataset.participants) - 1
         self.panelWizard()
         print('Wizard Next All')
 
@@ -1069,10 +1081,10 @@ class Window(QMainWindow):
                 layout = json.loads(layoutJSON.read())
                 labels = layout['labels']
             idx = self.mneQtBrowser._get_onset_idx(self.mneQtBrowser.mne.selected_region.getRegion()[0])
-            checkedAnnot = self.raw.annotations.__getitem__(idx)
+            checkedAnnot = self.currentData.annotations.__getitem__(idx)
             if 'ch_names' not in checkedAnnot.keys():
                 self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Checked)
-                for channelName in self.raw.ch_names:
+                for channelName in self.currentData.ch_names:
                     row, col = self.findIndex(channelName, labels)
                     checkBox = QCheckBox(channelName, parent=self.ChannelsUI.groupBoxChannels)
                     checkBox.setChecked(True)
@@ -1084,7 +1096,7 @@ class Window(QMainWindow):
                 ch_names = checkedAnnot['ch_names']
                 if not ch_names:
                     self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Checked)
-                    for channelName in self.raw.ch_names:
+                    for channelName in self.currentData.ch_names:
                         row, col = self.findIndex(channelName, labels)
                         checkBox = QCheckBox(channelName, parent=self.ChannelsUI.groupBoxChannels)
                         checkBox.setChecked(True)
@@ -1094,7 +1106,7 @@ class Window(QMainWindow):
                         self.ChannelsUI.gridLayout.addWidget(checkBox, row, col)
                 else:
                     self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Unchecked)
-                    for channelName in self.raw.ch_names:
+                    for channelName in self.currentData.ch_names:
                         row, col = self.findIndex(channelName, labels)
                         checkBox = QCheckBox(channelName, parent=self.ChannelsUI.groupBoxChannels)
                         if channelName in ch_names:
@@ -1156,7 +1168,7 @@ class Window(QMainWindow):
                 item = self.ChannelsUI.gridLayout.itemAt(i)
                 if type(item.widget()) == QCheckBox and item.widget().isChecked():
                     annotChannels.append(item.widget().text())
-        if len(annotChannels) == len(self.raw.ch_names):
+        if len(annotChannels) == len(self.currentData.ch_names):
             annotChannels = []
         selected_region = self.mneQtBrowser.mne.selected_region
         idx = self.mneQtBrowser._get_onset_idx(selected_region.getRegion()[0])
@@ -1165,15 +1177,15 @@ class Window(QMainWindow):
         duration = offset - onset
         description = selected_region.description
         ch_names = annotChannels
-        self.raw.annotations.delete(idx)
-        self.raw.annotations.append(onset, duration, description, [ch_names])
+        self.currentData.annotations.delete(idx)
+        self.currentData.annotations.append(onset, duration, description, [ch_names])
         self.ChannelsUI.close()
 
     def cancelChannelAnnotation(self):
         self.ChannelsUI.close()
 
     # Save annotations
-    def saveAnnotations(self):
+    def exportAnnotation(self):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Warning)
         msg.setText("Notification")
@@ -1182,8 +1194,12 @@ class Window(QMainWindow):
         msg.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
         ans = msg.exec()
         if ans == QMessageBox.Save:
-            self.rawTmp = mne.io.read_raw_fif(self.Dataset.tmpRaws.get(self.Dataset.bids_path.subject))
-            annotations = self.rawTmp.annotations
+            new_bids_path = self.currentDataset.bids_path.copy()
+            tmpBidsPath = new_bids_path.update(root=self.dataseTmpPath, extension='.fif')
+            basePath = str(tmpBidsPath).replace(tmpBidsPath.basename, '')
+            tmpData = self.currentData.copy()
+            # rawTmp = mne.io.read_raw_fif(self.currentDataset.tmpRaws.get(self.currentDataset.bids_path.subject), preload=True)
+            annotations = tmpData.annotations
             indeces = []
             i = 0
             for annotation in annotations:
@@ -1192,10 +1208,16 @@ class Window(QMainWindow):
                     i += 1
             annotations.delete(indeces)
             df = pd.DataFrame(annotations)
+            if 'ch_names' not in df.keys():
+                ch_names = ['()'] * len(annotations)
+                df['ch_names'] = ch_names
             del df['orig_time']
-            new_bids_path = self.Dataset.bids_path
-            annotBidsPath = new_bids_path.update(suffix='events', extension='.tsv')
-            df.to_csv(new_bids_path.basename, sep="\t", index=False)
+            new_bids_path = self.currentDataset.bids_path.copy()
+            annotBidsPath = new_bids_path.update(root=self.dataseTmpPath, suffix='events', extension='.tsv')
+            basePath = str(annotBidsPath).replace(annotBidsPath.basename,'')
+            if not Path(basePath).exists():
+                os.makedirs(basePath)
+            df.to_csv(annotBidsPath, sep="\t", index=False)
 
     def exitAction(self):
         msg = QMessageBox()
@@ -1215,7 +1237,7 @@ class Window(QMainWindow):
         self.DialogViz = uic.loadUi("guide/DialogViz.ui")
         self.DialogViz.setWindowTitle("Power Spectrum Density")
         print('Computing PSD')
-        if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
+        if self.currentDataset.bids_path.subject in self.currentDataset.tmpRaws:
             self.spectrum = self.rawTmp.compute_psd()
         else:
             self.spectrum = self.raw.compute_psd()
@@ -1229,7 +1251,7 @@ class Window(QMainWindow):
 
     def computeTopoMapAction(self):
         print('Plotting spectrum topomap')
-        if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
+        if self.currentDataset.bids_path.subject in self.currentDataset.tmpRaws:
             self.spectrum = self.rawTmp.compute_psd()
         else:
             self.spectrum = self.raw.compute_psd()
@@ -1242,7 +1264,7 @@ class Window(QMainWindow):
             self.DialogViztopo.verticalLayoutMain.addWidget(FigureCanvasQTAgg(fig))
 
     def computeERP_F(self):
-        if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
+        if self.currentDataset.bids_path.subject in self.currentDataset.tmpRaws:
             data = self.rawTmp.compute_psd()
         else:
             data = self.raw.compute_psd()
@@ -1254,7 +1276,7 @@ class Window(QMainWindow):
 
     def plotSensorsAction(self):
         print('Plotting Sensors')
-        if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
+        if self.currentDataset.bids_path.subject in self.currentDataset.tmpRaws:
             fig = self.rawTmp.plot_sensors(ch_type='eeg', show=False, show_names=True)
         else:
             fig = self.raw.plot_sensors(ch_type='eeg', show=False, show_names=True)
@@ -1267,7 +1289,7 @@ class Window(QMainWindow):
         self.movieLoading.start()
         self.loading.show()
         print('Covariance matrices')
-        if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
+        if self.currentDataset.bids_path.subject in self.currentDataset.tmpRaws:
             data = self.rawTmp
         else:
             data = self.raw
@@ -1286,7 +1308,7 @@ class Window(QMainWindow):
             self.DialogVizCov.verticalLayoutMain.addWidget(FigureCanvasQTAgg(fig))
 
     def plotEventsAction(self):
-        if self.Dataset.bids_path.subject in self.Dataset.tmpRaws:
+        if self.currentDataset.bids_path.subject in self.currentDataset.tmpRaws:
             data = self.rawTmp
         else:
             data = self.raw
@@ -1327,28 +1349,32 @@ class Window(QMainWindow):
         # self.raw.plot(duration=10, n_channels=20, block=False, color='blue', bad_color='red', show_options=True)
 
     def loadDatasetMock(self):
-        self.Dataset = Dataset('/mnt/Store/Data/CHBM/ds_bids_cbm_loris_24_11_21',
-                               'Dataset containing Cuban Human Brain Mapping database',
-                               'raw', 'https://doi.org/10.7303/syn22324937',
-                               ["Pedro A.Valdes-Sosa", "Lidice Galan-Garcia", "Jorge Bosch-Bayard",
-                                "Maria L. Bringas-Vega", "Eduardo Aubert-Vazquez", "Iris Rodriguez-Gil",
-                                "Samir Das", "Cecile Madjar", "Trinidad Virues-Alba", "Zia Mohades",
-                                "Leigh C. MacIntyre", "Christine Rogers", "Shawn Brown", "Lourdes Valdes-Urrutia",
-                                "Alan C. Evans", "Mitchell J. Valdes-Sosa"])
-        self.DataList = ['CBM00001', 'CBM00002', 'CBM00003', 'CBM00004', 'CBM00005', 'CBM00006']
+        self.currentDataset = Dataset('/mnt/Store/Data/CHBM/CHBMP_Test',
+                                      'Dataset containing Cuban Human Brain Mapping database',
+                                      'raw', 'https://doi.org/10.7303/syn22324937',
+                                      ["Pedro A.Valdes-Sosa", "Lidice Galan-Garcia", "Jorge Bosch-Bayard",
+                                       "Maria L. Bringas-Vega", "Eduardo Aubert-Vazquez", "Iris Rodriguez-Gil",
+                                       "Samir Das", "Cecile Madjar", "Trinidad Virues-Alba", "Zia Mohades",
+                                       "Leigh C. MacIntyre", "Christine Rogers", "Shawn Brown",
+                                       "Lourdes Valdes-Urrutia", "Alan C. Evans", "Mitchell J. Valdes-Sosa"])
+        self.currentDataset.participants = ['CBM00001', 'CBM00002', 'CBM00003', 'CBM00004', 'CBM00006', 'CBM00008',
+                                            'CBM00009', 'CBM00010', 'CBM00011', 'CBM00012']
         subject, session, task, acquisition, run, processing, recording, space, split, description, root, \
         suffix, extension, datatype, check = None, None, None, None, None, None, None, None, None, None, None, None, \
                                              None, None, True
-        self.Dataset.bids_path = BIDSPath(subject=self.DataList[0], session=session, task='protmap',
-                                          acquisition=acquisition, run=run,processing=processing, recording=recording,
-                                          space=space, split=split,description=description, root=self.Dataset.path,
-                                          suffix='eeg', extension='.edf', datatype='eeg', check=check)
+        self.currentDataset.bids_path = BIDSPath(subject=self.currentDataset.participants[0], session=session,
+                                                 task='protmap', acquisition=acquisition, run=run,
+                                                 processing=processing, recording=recording, space=space,
+                                                 split=split, description=description, root=self.currentDataset.path,
+                                                 suffix='eeg', extension='.edf', datatype='eeg', check=check)
+        self.activeSession.Datasets.append(self.currentDataset)
+        print(self.activeSession)
         self.currentPart = 0
         self.panelWizard()
 
 
     def testAnnotation(self):
-        for annot in self.raw.annotations:
+        for annot in self.currentData.annotations:
             print("Annotation:")
             print("Description: " + annot['description'])
             print("Onset: " + str(annot['onset']))
@@ -1360,16 +1386,17 @@ class Window(QMainWindow):
         return namedtuple('X', sessionDict.keys())(*sessionDict.values())
 
 class Dataset:
-    def __init__(self, path, name, dstype, doi, authors):
+    def __init__(self, path, name, dstype, doi, authors, participants=[]):
         self.path = path
         self.name = name
         self.dstype = dstype
         self.doi = doi
         self.authors = authors
+        self.participants = participants
         self.tmpRaws = {}
 
 class Session:
-    def __init__(self, username, password, fullname, email, organization, last_login, key):
+    def __init__(self, username, password, fullname, email, organization, last_login, key, Datasets=[]):
         self.username = username
         self.password = password
         self.fullname = fullname
@@ -1377,7 +1404,15 @@ class Session:
         self.organization = organization
         self.last_login = last_login
         self.key = key
-        self.data = []
+        self.Datasets = Datasets
+
+    def __str__(self):
+        return "Session:\n" + \
+            "Fullname:" + self.fullname + "\n" + \
+            "Username:" + str(self.username) + "\n" + \
+            "Email:" + str(self.email) + "\n" + \
+            "Organization:" + str(self.organization) + "\n" + \
+            "Datasets:" + str(self.Datasets) + "\n"
 
 class CustomEncoder(json.JSONEncoder):
     def default(self, o):

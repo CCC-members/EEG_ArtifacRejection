@@ -86,6 +86,16 @@
           </spacer>
          </item>
          <item>
+          <widget class="QPushButton" name="pushButtonExport">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Export</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="pushButtonSave">
            <property name="enabled">
             <bool>false</bool>

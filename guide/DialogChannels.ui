@@ -20,23 +20,17 @@
    <string>Select the channels for annotation</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_3">
-   <item row="0" column="0">
-    <widget class="QCheckBox" name="checkBoxAll">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
+   <item row="2" column="2">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
      </property>
-     <property name="text">
-      <string>Select all channels</string>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel</set>
      </property>
     </widget>
    </item>
-   <item row="1" column="0" colspan="2">
+   <item row="1" column="0" colspan="3">
     <widget class="QGroupBox" name="groupBoxChannels">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -61,13 +55,128 @@
      </layout>
     </widget>
    </item>
-   <item row="2" column="1">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+   <item row="0" column="2">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string/>
      </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel</set>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>9</y>
+        <width>91</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">font:bold
+</string>
+      </property>
+      <property name="text">
+       <string>Hemisphere:</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="checkBoxHemL">
+      <property name="geometry">
+       <rect>
+        <x>130</x>
+        <y>8</y>
+        <width>51</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Left</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="checkBoxHemR">
+      <property name="geometry">
+       <rect>
+        <x>190</x>
+        <y>8</y>
+        <width>61</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Right</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_2">
+      <property name="geometry">
+       <rect>
+        <x>270</x>
+        <y>10</y>
+        <width>51</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">font:bold
+</string>
+      </property>
+      <property name="text">
+       <string>Area:</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="checkBoxAreaF">
+      <property name="geometry">
+       <rect>
+        <x>320</x>
+        <y>8</y>
+        <width>71</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Frontal</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="checkBoxAreaT">
+      <property name="geometry">
+       <rect>
+        <x>395</x>
+        <y>8</y>
+        <width>81</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Temporal</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="checkBoxAreaO">
+      <property name="geometry">
+       <rect>
+        <x>480</x>
+        <y>8</y>
+        <width>81</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Opcipital</string>
+      </property>
+     </widget>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="2">
+    <widget class="QCheckBox" name="checkBoxAll">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">font: bold</string>
+     </property>
+     <property name="text">
+      <string>Select all channels</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
