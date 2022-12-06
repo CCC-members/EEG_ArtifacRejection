@@ -30,29 +30,23 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="0" colspan="3">
-    <widget class="QGroupBox" name="groupBoxChannels">
+   <item row="0" column="0" colspan="2">
+    <widget class="QCheckBox" name="checkBoxAll">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="title">
-      <string/>
+     <property name="styleSheet">
+      <string notr="true">font: bold</string>
      </property>
-     <layout class="QGridLayout" name="gridLayout_2">
-      <item row="0" column="0">
-       <layout class="QGridLayout" name="gridLayout">
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
-        <property name="spacing">
-         <number>0</number>
-        </property>
-       </layout>
-      </item>
-     </layout>
+     <property name="text">
+      <string>Select all channels</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
    <item row="0" column="2">
@@ -89,6 +83,9 @@
       <property name="text">
        <string>Left</string>
       </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
      </widget>
      <widget class="QCheckBox" name="checkBoxHemR">
       <property name="geometry">
@@ -101,6 +98,9 @@
       </property>
       <property name="text">
        <string>Right</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
       </property>
      </widget>
      <widget class="QLabel" name="label_2">
@@ -132,6 +132,9 @@
       <property name="text">
        <string>Frontal</string>
       </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
      </widget>
      <widget class="QCheckBox" name="checkBoxAreaT">
       <property name="geometry">
@@ -145,6 +148,9 @@
       <property name="text">
        <string>Temporal</string>
       </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
      </widget>
      <widget class="QCheckBox" name="checkBoxAreaO">
       <property name="geometry">
@@ -156,28 +162,53 @@
        </rect>
       </property>
       <property name="text">
-       <string>Opcipital</string>
+       <string>Occipital</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="checkBoxAreaC">
+      <property name="geometry">
+       <rect>
+        <x>563</x>
+        <y>8</y>
+        <width>81</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Central</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
       </property>
      </widget>
     </widget>
    </item>
-   <item row="0" column="0" colspan="2">
-    <widget class="QCheckBox" name="checkBoxAll">
+   <item row="1" column="0" colspan="3">
+    <widget class="QGroupBox" name="groupBoxChannels">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="styleSheet">
-      <string notr="true">font: bold</string>
+     <property name="title">
+      <string/>
      </property>
-     <property name="text">
-      <string>Select all channels</string>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <layout class="QGridLayout" name="gridLayout">
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <property name="spacing">
+         <number>0</number>
+        </property>
+       </layout>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>

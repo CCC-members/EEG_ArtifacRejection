@@ -27,6 +27,7 @@ from mne_bids import (read_raw_bids, BIDSPath)
 from pathlib import Path
 import matplotlib.pyplot as plt
 plt.switch_backend('Qt5Agg')
+import functions.Utils as utilities
 
 
 class Window(QMainWindow):
@@ -244,19 +245,19 @@ class Window(QMainWindow):
         self.createSessionUI = uic.loadUi("guide/CreateSession.ui")
         fnStyle = self.createSessionUI.lineEditFullname.styleSheet()
         self.createSessionUI.lineEditFullname.textChanged.connect(
-            lambda: self.checkFullname(self.createSessionUI.lineEditFullname, fnStyle))
+            lambda: utilities.checkFullname(self, self.createSessionUI.lineEditFullname, fnStyle))
         unStyle = self.createSessionUI.lineEditUsername.styleSheet()
         self.createSessionUI.lineEditUsername.textChanged.connect(
-            lambda: self.checkUsername(self.createSessionUI.lineEditUsername, unStyle))
+            lambda: utilities.checkUsername(self, self.createSessionUI.lineEditUsername, unStyle))
         unStyle = self.createSessionUI.lineEditPassword.styleSheet()
         self.createSessionUI.lineEditPassword.textChanged.connect(
-            lambda: self.checkPassword(self.createSessionUI.lineEditPassword, unStyle))
+            lambda: utilities.checkPassword(self, self.createSessionUI.lineEditPassword, unStyle))
         unStyle = self.createSessionUI.lineEditPassword.styleSheet()
         self.createSessionUI.lineEditRepPassword.textChanged.connect(
-            lambda: self.checkRepPassword(self.createSessionUI.lineEditRepPassword, unStyle))
+            lambda: utilities.checkRepPassword(self, self.createSessionUI.lineEditRepPassword, unStyle))
         eStyle = self.createSessionUI.lineEditEmail.styleSheet()
         self.createSessionUI.lineEditEmail.textChanged.connect(
-            lambda: self.checkEmail(self.createSessionUI.lineEditEmail, eStyle))
+            lambda: utilities.checkEmail(self, self.createSessionUI.lineEditEmail, eStyle))
         self.createSessionUI.lineEditFullname.returnPressed.connect(self.createSessionUI.lineEditUsername.setFocus)
         self.createSessionUI.lineEditUsername.returnPressed.connect(self.createSessionUI.lineEditPassword.setFocus)
         self.createSessionUI.lineEditPassword.returnPressed.connect(self.createSessionUI.lineEditRepPassword.setFocus)
@@ -305,92 +306,6 @@ class Window(QMainWindow):
             msg.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
-
-    def checkFullname(self, tWidget, oStyle):
-        regex = re.compile(r"^[\-'a-zA-Z ]+$")
-        if re.fullmatch(regex, tWidget.text()):
-            tWidget.setStyleSheet(oStyle)
-            self.createSessionUI.labelCheckField.setText("")
-        else:
-            tWidget.setStyleSheet("border: 1px solid red; color: red")
-            self.createSessionUI.labelCheckField.setText("Invalid fullname")
-
-    def checkUsername(self, tWidget, oStyle):
-        regex = r'^[A-Za-z]{3}[A-Za-z0-9._%+-]*$'
-        if re.fullmatch(regex, tWidget.text()):
-            tWidget.setStyleSheet(oStyle)
-            self.createSessionUI.labelCheckField.setText("")
-        else:
-            tWidget.setStyleSheet("border: 1px solid red; color: red")
-            self.createSessionUI.labelCheckField.setText("Invalid username")
-        for session in self.sessions:
-            if session.username == tWidget.text():
-                tWidget.setStyleSheet("border: 1px solid red; color: red")
-                self.createSessionUI.labelCheckField.setText("The username is already taked")
-
-    def checkPassword(self, tWidget, oStyle ):
-        password = tWidget.text()
-        MIN_SIZE = 8
-        MAX_SIZE = 20
-        password_size = len(password)
-        if password_size < MIN_SIZE or password_size > MAX_SIZE:
-            tWidget.setStyleSheet("border: 1px solid red; color: red")
-            self.createSessionUI.labelCheckField.setText("Password should have 8-20 characters")
-            return False
-        valid_chars = {'-', '_', '.', '!', '@', '#', '$', '^', '&', '(', ')', '*'}
-        invalid_chars = set(punctuation + whitespace) - valid_chars
-        for char in invalid_chars:
-            if char in password:
-                tWidget.setStyleSheet("border: 1px solid red; color: red")
-                self.createSessionUI.labelCheckField.setText("Typing a wrong character")
-                return False
-        password_has_digit = False
-        for char in password:
-            if char in digits:
-                password_has_digit = True
-                break
-        if not password_has_digit:
-            tWidget.setStyleSheet("border: 1px solid red; color: red")
-            self.createSessionUI.labelCheckField.setText("Password should have one digit")
-            return False
-        password_has_lowercase = False
-        for char in password:
-            if char in ascii_lowercase:
-                password_has_lowercase = True
-                break
-        if not password_has_lowercase:
-            tWidget.setStyleSheet("border: 1px solid red; color: red")
-            self.createSessionUI.labelCheckField.setText("Password should have lowercase char")
-            return False
-        password_has_uppercase = False
-        for char in password:
-            if char in ascii_uppercase:
-                password_has_uppercase = True
-                break
-        if not password_has_uppercase:
-            tWidget.setStyleSheet("border: 1px solid red; color: red")
-            self.createSessionUI.labelCheckField.setText("Password should have uppercase char")
-            return False
-        tWidget.setStyleSheet(oStyle)
-        self.createSessionUI.labelCheckField.setText("")
-        return True
-
-    def checkRepPassword(self, tWidget, oStyle):
-        if tWidget.text() == self.createSessionUI.lineEditPassword.text():
-            tWidget.setStyleSheet(oStyle)
-            self.createSessionUI.labelCheckField.setText("")
-        else:
-            tWidget.setStyleSheet("border: 1px solid red; color: red")
-            self.createSessionUI.labelCheckField.setText("The passwords are not the same")
-
-    def checkEmail(self, tWidget, oStyle):
-        regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-        if re.fullmatch(regex, tWidget.text()):
-            tWidget.setStyleSheet(oStyle)
-            self.createSessionUI.labelCheckField.setText("")
-        else:
-            tWidget.setStyleSheet("border: 1px solid red; color: red")
-            self.createSessionUI.labelCheckField.setText("Invalid email address")
 
     def closeSession(self):
         self.MainUi.button_logout.setParent(None)
@@ -734,7 +649,6 @@ class Window(QMainWindow):
         labels = participants[0]
         del participants[0]
         subject = participants[0][0].replace('sub-', '')
-
         try:
             self.currentDataset.bids_path = BIDSPath(subject=subject, session=session, task=task,
                                                      acquisition=acquisition, run=run, processing=processing,
@@ -1120,12 +1034,94 @@ class Window(QMainWindow):
                         self.ChannelsUI.gridLayout.addWidget(checkBox, row, col)
             self.ChannelsUI.gridLayout.setVerticalSpacing(15)
             self.ChannelsUI.gridLayout.setHorizontalSpacing(0)
-            self.ChannelsUI.checkBoxAll.clicked.connect(lambda: self.onSelectAllChannels(self.ChannelsUI.checkBoxAll.isChecked()))
+            self.ChannelsUI.checkBoxAll.clicked.connect(
+                lambda: self.onSelectAllChannels(self.ChannelsUI.checkBoxAll.isChecked()))
+            self.ChannelsUI.checkBoxHemL.clicked.connect(
+                lambda: self.onSelectChannelsRegion(self.ChannelsUI.checkBoxHemL.isChecked(),
+                                                    self.ChannelsUI.checkBoxHemR.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaF.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaT.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaO.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaC.isChecked()))
+            self.ChannelsUI.checkBoxHemR.clicked.connect(
+                lambda: self.onSelectChannelsRegion(self.ChannelsUI.checkBoxHemL.isChecked(),
+                                                    self.ChannelsUI.checkBoxHemR.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaF.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaT.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaO.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaC.isChecked()))
+            self.ChannelsUI.checkBoxAreaF.clicked.connect(
+                lambda: self.onSelectChannelsRegion(self.ChannelsUI.checkBoxHemL.isChecked(),
+                                                    self.ChannelsUI.checkBoxHemR.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaF.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaT.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaO.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaC.isChecked()))
+            self.ChannelsUI.checkBoxAreaT.clicked.connect(
+                lambda: self.onSelectChannelsRegion(self.ChannelsUI.checkBoxHemL.isChecked(),
+                                                    self.ChannelsUI.checkBoxHemR.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaF.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaT.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaO.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaC.isChecked()))
+            self.ChannelsUI.checkBoxAreaO.clicked.connect(
+                lambda: self.onSelectChannelsRegion(self.ChannelsUI.checkBoxHemL.isChecked(),
+                                                    self.ChannelsUI.checkBoxHemR.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaF.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaT.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaO.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaC.isChecked()))
+            self.ChannelsUI.checkBoxAreaC.clicked.connect(
+                lambda: self.onSelectChannelsRegion(self.ChannelsUI.checkBoxHemL.isChecked(),
+                                                    self.ChannelsUI.checkBoxHemR.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaF.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaT.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaO.isChecked(),
+                                                    self.ChannelsUI.checkBoxAreaC.isChecked()))
             btnApply = self.ChannelsUI.buttonBox.button(QDialogButtonBox.StandardButton.Apply)
-            btnApply.clicked.connect(lambda: self.applyChannelAnnotation())
+            btnApply.clicked.connect(
+                lambda: self.applyChannelAnnotation())
             btnCancel = self.ChannelsUI.buttonBox.button(QDialogButtonBox.StandardButton.Cancel)
-            btnCancel.clicked.connect(lambda: self.cancelChannelAnnotation())
+            btnCancel.clicked.connect(
+                lambda: self.cancelChannelAnnotation())
             self.ChannelsUI.show()
+
+    def onSelectChannelsRegion(self, checkedL, checkedR, checkedF, checkedT, checkedO, checkedC):
+        if checkedL and checkedR and checkedF and checkedT and checkedO and checkedC or \
+            checkedL and checkedR and not checkedF and not checkedT and not checkedO and not checkedC or \
+                not checkedL and not checkedR and checkedF and checkedT and checkedO and checkedC:
+            self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.CheckState)
+            self.onSelectAllChannels(True)
+            return
+        else:
+            self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Unchecked)
+            self.onSelectAllChannels(False)
+            ch_names = self.currentData.ch_names
+            ch_nameRej = []
+            for name in ch_names:
+                if not checkedL and not re.compile(r"^[a-zA-Z]+[13579][h]*$").findAll(name):
+                    ch_nameRej.append(name)
+                if not checkedR and not re.compile(r"^[a-zA-Z]+[2468][h]*$").findAll(name) and \
+                        not re.compile(r"^[a-zA-Z]+10[h]*$").findAll(name):
+                    ch_nameRej.append(name)
+                if not checkedF and (not re.compile(r"^[a-zA-Z]+[13579][h]*$").findAll(name) or \
+                        not re.compile(r"^[a-zA-Z]+10[h]*$").findAll(name)):
+                    ch_nameRej.append(name)
+                if not checkedF and not re.compile(r"^[NAF]+[a-zA-Z0-9]*[h]*$").findAll(name):
+                    ch_nameRej.append(name)
+                if not checkedT and not re.compile(r"^[a-zA-Z]*[T]+[a-zA-Z0-9]*[h]*$").findAll(name):
+                    ch_nameRej.append(name)
+                if not checkedO and not re.compile(r"^[POI]+[a-zA-Z0-9]*[h]*$").findAll(name):
+                    ch_nameRej.append(name)
+                if not checkedO and not re.compile(r"^[A-Z]+[a-zA-Z0-9]*[hz]*$").findAll(name):
+                    ch_nameRej.append(name)
+            for i in range(self.ChannelsUI.gridLayout.count()):
+                item = self.ChannelsUI.gridLayout.itemAt(i)
+                if type(item.widget()) == QCheckBox:
+                    if item.text() in ch_nameRej:
+                        item.widget().setCheckState(Qt.CheckState.Unchecked)
+                        item.widget().setStyleSheet("color: blue;")
+        print("onSelectChannels")
 
     def onSelectAllChannels(self, checkedAll):
         for i in range(self.ChannelsUI.gridLayout.count()):
@@ -1417,6 +1413,7 @@ class Session:
 class CustomEncoder(json.JSONEncoder):
     def default(self, o):
             return o.__dict__
+
 class Annotation:
     def __init__(self, onset, offset, description, orig_time=None, ch_names=None):
         self.onset = onset
@@ -1432,7 +1429,6 @@ class Annotation:
                 "Onset:" + str(self.onset) + "\n" + \
                 "Duration:" + str(self.duration) + "\n" + \
                 "Ch_names:" + str(self.ch_names) + "\n"
-
 
 # application
 if __name__ == "__main__":
