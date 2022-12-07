@@ -1087,38 +1087,40 @@ class Window(QMainWindow):
             self.ChannelsUI.show()
 
     def onSelectChannelsRegion(self, checkedL, checkedR, checkedF, checkedT, checkedO, checkedC):
-        if checkedL and checkedR and checkedF and checkedT and checkedO and checkedC or \
-            checkedL and checkedR and not checkedF and not checkedT and not checkedO and not checkedC or \
-                not checkedL and not checkedR and checkedF and checkedT and checkedO and checkedC:
-            self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.CheckState)
+        if (checkedL and checkedR and checkedF and checkedT and checkedO and checkedC) or \
+                (checkedL and checkedR and not checkedF and not checkedT and not checkedO and not checkedC) or \
+                (not checkedL and not checkedR and checkedF and checkedT and checkedO and checkedC):
+            self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Checked)
             self.onSelectAllChannels(True)
             return
         else:
+            self.onSelectAllChannels(True)
             self.ChannelsUI.checkBoxAll.setCheckState(Qt.CheckState.Unchecked)
-            self.onSelectAllChannels(False)
             ch_names = self.currentData.ch_names
-            ch_nameRej = []
-            for name in ch_names:
-                if not checkedL and not re.compile(r"^[a-zA-Z]+[13579][h]*$").findAll(name):
-                    ch_nameRej.append(name)
-                if not checkedR and not re.compile(r"^[a-zA-Z]+[2468][h]*$").findAll(name) and \
-                        not re.compile(r"^[a-zA-Z]+10[h]*$").findAll(name):
-                    ch_nameRej.append(name)
-                if not checkedF and (not re.compile(r"^[a-zA-Z]+[13579][h]*$").findAll(name) or \
-                        not re.compile(r"^[a-zA-Z]+10[h]*$").findAll(name)):
-                    ch_nameRej.append(name)
-                if not checkedF and not re.compile(r"^[NAF]+[a-zA-Z0-9]*[h]*$").findAll(name):
-                    ch_nameRej.append(name)
-                if not checkedT and not re.compile(r"^[a-zA-Z]*[T]+[a-zA-Z0-9]*[h]*$").findAll(name):
-                    ch_nameRej.append(name)
-                if not checkedO and not re.compile(r"^[POI]+[a-zA-Z0-9]*[h]*$").findAll(name):
-                    ch_nameRej.append(name)
-                if not checkedO and not re.compile(r"^[A-Z]+[a-zA-Z0-9]*[hz]*$").findAll(name):
-                    ch_nameRej.append(name)
+            ch_nameToUnmark = []
+            if not checkedL:
+                r = re.compile(r"^[a-zA-Z]+[13579][h]*|[a-zA-Z0-9]+[zZ]$")
+                ch_nameToUnmark += list(filter(r.match, ch_names))
+            if not checkedR:
+                r = re.compile(r"^[a-zA-Z]+[2468][h]*|[a-zA-Z]+10[h]*$")
+                ch_nameToUnmark += list(filter(r.match, ch_names))
+            if not checkedF:
+                r = re.compile(r"^[NAF]+[a-zA-Z0-9]*[h]*$")
+                ch_nameToUnmark += list(filter(r.match, ch_names))
+            if not checkedT:
+                r = re.compile(r"^[a-zA-Z]*[T]+[a-zA-Z0-9]*[h]*$")
+                ch_nameToUnmark += list(filter(r.match, ch_names))
+            if not checkedO:
+                r = re.compile(r"^[POI]+[a-zA-Z0-9]*[h]*$")
+                ch_nameToUnmark += list(filter(r.match, ch_names))
+            if not checkedC:
+                r = re.compile(r"^[a-zA-Z]*[C][a-zA-Z0-9]*[hzZ]*$")
+                ch_nameToUnmark += list(filter(r.match, ch_names))
+            print(ch_nameToUnmark)
             for i in range(self.ChannelsUI.gridLayout.count()):
                 item = self.ChannelsUI.gridLayout.itemAt(i)
                 if type(item.widget()) == QCheckBox:
-                    if item.text() in ch_nameRej:
+                    if item.widget().text() in ch_nameToUnmark:
                         item.widget().setCheckState(Qt.CheckState.Unchecked)
                         item.widget().setStyleSheet("color: blue;")
         print("onSelectChannels")
